@@ -14,6 +14,13 @@ Along the way, they’ll encounter different terrains, collect items, and trade 
 
 ---
 
+## 🤸‍♀️ Running The Game
+First install python arcade using `pip install arcade`.
+Then just run `python game.py`.
+*Mac users will have to allow their IDE to access their keystrokes.*
+
+---
+
 ## 🧱 Project Structure
 ```
 WSS/
