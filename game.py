@@ -33,8 +33,13 @@ class Game(arcade.Window):
 
         #Creates a new world instance!
         self.world = World(width_in_tiles, height_in_tiles, difficulty="normal", tile_size=TILE_SIZE)
-        self.player = Player("Player1", (0, 0))  # Example starting position
-        self.trader = Trader("Trader1", (5, 5))  # Example starting position
+
+        # Preserve existing inventories if setup is called again
+        player_inventory = self.player.inventory if self.player else None
+        trader_inventory = self.trader.inventory if self.trader else None
+
+        self.player = Player("Player1", 100, (0, 0), inventory=player_inventory)  # Example starting position
+        self.trader = Trader("Trader1", (5, 5), inventory=trader_inventory if trader_inventory else None)  # Example starting position
 
     def on_draw(self) -> None:
         """Arcade draw handler – draws the world each frame."""
@@ -47,6 +52,39 @@ class Game(arcade.Window):
         if self.trader:
             self.trader.draw()
 
+    def on_key_press(self, symbol, modifiers):
+        if self.player:
+            current_location = self.player.location
+        new_location = list(current_location)
+        moved = False
+        
+        if self.player and self.trader and self.player.strength > 0:
+            # get potential location from user input
+            if symbol == arcade.key.LEFT or symbol == arcade.key.A:
+                new_location[0] -= 1
+                moved = True
+            elif symbol == arcade.key.RIGHT or symbol == arcade.key.D:
+                new_location[0] += 1
+                moved = True
+            elif symbol == arcade.key.UP or symbol == arcade.key.W:
+                new_location[1] += 1
+                moved = True
+            elif symbol == arcade.key.DOWN or symbol == arcade.key.S:
+                new_location[1] -= 1
+                moved = True
+
+            # check for tile overlap with trader
+            if moved and tuple(new_location) == self.trader.location:
+                print(f"Movement denied: Player cannot occupy the same tile as {self.trader.name}.")
+                return # block the move
+
+            # movement occurred and move is valid, update player location
+            if moved:
+                self.player.set_location(tuple(new_location)) 
+                self.player.is_at_same_location(self.trader)
+                
+        else:
+            print("Player has no strength left to move.")
 
 def main() -> None:
     """Entry point when running this module directly."""
