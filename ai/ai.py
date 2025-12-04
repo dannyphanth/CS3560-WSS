@@ -1,21 +1,26 @@
 """
 AI system for game agents.
 Provides vision (scanning environment) and brain (decision making) capabilities.
+Works with Player class that uses 'location' attribute for position.
 """
 
 from typing import Tuple, List, Dict, Optional, Any
 from abc import ABC, abstractmethod
-import math
 
-#-- Vision System --
+
 class Vision:
     """Scans nearby tiles for resources, hazards, and traders."""
     
-    def __init__(self, world, actor):
+    def __init__(self, world, player):
         self.world = world
-        self.actor = actor
+        self.player = player
     
-    #locates closest resources, hazards, traders, safe tiles
+    def get_player_pos(self) -> Tuple[int, int]:
+        """Get player position, checking both 'location' and 'pos' attributes."""
+        if hasattr(self.player, 'location'):
+            return self.player.location
+        return getattr(self.player, 'pos', (0, 0))
+    
     def scan_area(self, radius: int = 5) -> Dict[str, Any]:
         """
         Scan tiles within radius for important features.
@@ -26,7 +31,7 @@ class Vision:
         - traders: list of (pos, trader, distance)
         - safe_tiles: list of (pos, cost, distance) for movement
         """
-        x, y = self.actor.pos
+        x, y = self.get_player_pos()
         
         resources = []
         hazards = []
@@ -45,24 +50,28 @@ class Vision:
                 pos = (nx, ny)
                 
                 # Check for items (food/water)
-                if pos in self.world.items:
+                if hasattr(self.world, 'items') and pos in self.world.items:
                     item = self.world.items[pos]
-                    resources.append((pos, item['type'], distance))
+                    resources.append((pos, item.get('type', 'unknown'), distance))
                 
                 # Check for traders
-                for trader in self.world.traders:
-                    if trader.pos == pos and trader.alive:
-                        traders.append((pos, trader, distance))
+                if hasattr(self.world, 'traders'):
+                    for trader in self.world.traders:
+                        trader_pos = trader.location if hasattr(trader, 'location') else trader.pos
+                        is_alive = getattr(trader, 'alive', True)
+                        if trader_pos == pos and is_alive:
+                            traders.append((pos, trader, distance))
                 
                 # Analyze terrain
-                terrain = self.world.get_tile(nx, ny)
-                move_cost = self.world.get_movement_cost(nx, ny)
-                
-                # Hazards (high cost terrain)
-                if move_cost > 3:
-                    hazards.append((pos, terrain, distance))
-                elif move_cost < float('inf'):
-                    safe_tiles.append((pos, move_cost, distance))
+                if hasattr(self.world, 'get_movement_cost'):
+                    move_cost = self.world.get_movement_cost(nx, ny)
+                    
+                    # Hazards (high cost terrain)
+                    if move_cost > 3:
+                        terrain = self.world.get_tile(nx, ny) if hasattr(self.world, 'get_tile') else 'unknown'
+                        hazards.append((pos, terrain, distance))
+                    elif move_cost < float('inf'):
+                        safe_tiles.append((pos, move_cost, distance))
         
         return {
             'resources': sorted(resources, key=lambda x: x[2]),
@@ -71,7 +80,6 @@ class Vision:
             'safe_tiles': sorted(safe_tiles, key=lambda x: x[2])
         }
     
-    #locates nearest target of specified type
     def find_nearest(self, target_type: str, scan_data: Dict = None) -> Optional[Tuple[int, int]]:
         """Find nearest target of given type (food, water, trader)."""
         if scan_data is None:
@@ -87,38 +95,37 @@ class Vision:
         
         return None
     
-    #evaulates danger at a position
     def assess_danger(self, pos: Tuple[int, int]) -> float:
         """
         Assess danger level at position (0.0 = safe, 1.0 = deadly).
         Based on terrain cost and distance to hazards.
         """
         x, y = pos
-        terrain_cost = self.world.get_movement_cost(x, y)
+        if hasattr(self.world, 'get_movement_cost'):
+            terrain_cost = self.world.get_movement_cost(x, y)
+            
+            # Impassable is deadly
+            if terrain_cost == float('inf'):
+                return 1.0
+            
+            # High cost terrain is moderately dangerous
+            danger = min(terrain_cost / 10.0, 0.8)
+            return danger
         
-        # Impassable is deadly
-        if terrain_cost == float('inf'):
-            return 1.0
-        
-        # High cost terrain is moderately dangerous
-        danger = min(terrain_cost / 10.0, 0.8)
-        
-        return danger
+        return 0.0
 
 
-#-- Brain System --
 class Brain(ABC):
     """
     Abstract base class for AI decision-making.
     Subclass to create different play styles.
     """
     
-    def __init__(self, actor, world):
-        self.actor = actor
+    def __init__(self, player, world):
+        self.player = player
         self.world = world
-        self.vision = Vision(world, actor)
+        self.vision = Vision(world, player)
     
-    #must be implemented by subclasses
     @abstractmethod
     def decide_action(self) -> Dict[str, Any]:
         """
@@ -130,24 +137,33 @@ class Brain(ABC):
         """
         pass
     
-    #calculates urgency of needs
     def _assess_needs(self) -> Dict[str, float]:
         """Assess urgency of needs (0.0 = satisfied, 1.0 = critical)."""
+        # Access Player attributes - provide defaults if not present
+        health = getattr(self.player, 'health', 100)
+        max_health = getattr(self.player, 'max_health', 100)
+        food = getattr(self.player, 'food', 100)
+        max_food = getattr(self.player, 'max_food', 100)
+        water = getattr(self.player, 'water', 100)
+        max_water = getattr(self.player, 'max_water', 100)
+        
         return {
-            'health': 1.0 - (self.actor.health / self.actor.max_health),
-            'food': 1.0 - (self.actor.food / self.actor.max_food),
-            'water': 1.0 - (self.actor.water / self.actor.max_water)
+            'health': 1.0 - (health / max_health) if max_health > 0 else 0.0,
+            'food': 1.0 - (food / max_food) if max_food > 0 else 0.0,
+            'water': 1.0 - (water / max_water) if max_water > 0 else 0.0
         }
     
-    #simple pathfinding to target
     def _find_path_to(self, target: Tuple[int, int]) -> Optional[Tuple[int, int]]:
         """Find next move toward target using simple pathfinding."""
-        x, y = self.actor.pos
+        x, y = self.vision.get_player_pos()
         tx, ty = target
         
         # Try moving toward target
         dx = 1 if tx > x else (-1 if tx < x else 0)
         dy = 1 if ty > y else (-1 if ty < y else 0)
+        
+        if not hasattr(self.world, 'get_movement_cost'):
+            return target  # No pathfinding possible
         
         # Try diagonal first
         if dx != 0 and dy != 0:
@@ -164,18 +180,14 @@ class Brain(ABC):
         
         return None
 
-#Play style implementations ----
 
-#-- Cautious Brain --
-#prioritizes safety and resource management
-#rest when health is low
-#only explore safe tiles
 class CautiousBrain(Brain):
     """Conservative play style: prioritizes safety and resource management."""
     
     def decide_action(self) -> Dict[str, Any]:
         needs = self._assess_needs()
         scan = self.vision.scan_area()
+        player_pos = self.vision.get_player_pos()
         
         # Critical health - rest is priority
         if needs['health'] > 0.7:
@@ -185,7 +197,7 @@ class CautiousBrain(Brain):
         if needs['water'] > 0.6:
             water_pos = self.vision.find_nearest('water', scan)
             if water_pos:
-                if water_pos == self.actor.pos:
+                if water_pos == player_pos:
                     return {'action': 'collect', 'params': {'type': 'water'}}
                 next_pos = self._find_path_to(water_pos)
                 if next_pos:
@@ -195,7 +207,7 @@ class CautiousBrain(Brain):
         if needs['food'] > 0.6:
             food_pos = self.vision.find_nearest('food', scan)
             if food_pos:
-                if food_pos == self.actor.pos:
+                if food_pos == player_pos:
                     return {'action': 'collect', 'params': {'type': 'food'}}
                 next_pos = self._find_path_to(food_pos)
                 if next_pos:
@@ -230,17 +242,13 @@ class CautiousBrain(Brain):
         return {'action': 'wait', 'params': {}}
 
 
-#-- Aggressive Brain --
-#larger vision radius
-#seeks traders and valuable resources
-#willing to take risks
-#rest only when critically low
 class AggressiveBrain(Brain):
     """Aggressive play style: takes risks, seeks traders and valuable resources."""
     
     def decide_action(self) -> Dict[str, Any]:
         needs = self._assess_needs()
         scan = self.vision.scan_area(radius=7)  # Larger vision
+        player_pos = self.vision.get_player_pos()
         
         # Only rest if critically low
         if needs['health'] > 0.85:
@@ -249,7 +257,7 @@ class AggressiveBrain(Brain):
         # Seek traders for potential advantage
         if scan['traders'] and max(needs.values()) < 0.7:
             trader_pos = scan['traders'][0][0]
-            if trader_pos == self.actor.pos:
+            if trader_pos == player_pos:
                 return {'action': 'trade', 'params': {'trader': scan['traders'][0][1]}}
             next_pos = self._find_path_to(trader_pos)
             if next_pos:
@@ -259,7 +267,7 @@ class AggressiveBrain(Brain):
         if needs['water'] > 0.5:
             water_pos = self.vision.find_nearest('water', scan)
             if water_pos:
-                if water_pos == self.actor.pos:
+                if water_pos == player_pos:
                     return {'action': 'collect', 'params': {'type': 'water'}}
                 next_pos = self._find_path_to(water_pos)
                 if next_pos:
@@ -268,7 +276,7 @@ class AggressiveBrain(Brain):
         if needs['food'] > 0.5:
             food_pos = self.vision.find_nearest('food', scan)
             if food_pos:
-                if food_pos == self.actor.pos:
+                if food_pos == player_pos:
                     return {'action': 'collect', 'params': {'type': 'food'}}
                 next_pos = self._find_path_to(food_pos)
                 if next_pos:
@@ -291,15 +299,14 @@ class AggressiveBrain(Brain):
         
         return {'action': 'wait', 'params': {}}
 
-#-- Balanced Brain --
-#weighs all factors reasonably
-#maintains resource buffer
+
 class BalancedBrain(Brain):
     """Balanced play style: weighs all factors reasonably."""
     
     def decide_action(self) -> Dict[str, Any]:
         needs = self._assess_needs()
         scan = self.vision.scan_area(radius=6)
+        player_pos = self.vision.get_player_pos()
         
         # Rest when health is concerning
         if needs['health'] > 0.6:
@@ -311,7 +318,7 @@ class BalancedBrain(Brain):
             if needs['water'] == max_need:
                 water_pos = self.vision.find_nearest('water', scan)
                 if water_pos:
-                    if water_pos == self.actor.pos:
+                    if water_pos == player_pos:
                         return {'action': 'collect', 'params': {'type': 'water'}}
                     next_pos = self._find_path_to(water_pos)
                     if next_pos:
@@ -319,7 +326,7 @@ class BalancedBrain(Brain):
             elif needs['food'] == max_need:
                 food_pos = self.vision.find_nearest('food', scan)
                 if food_pos:
-                    if food_pos == self.actor.pos:
+                    if food_pos == player_pos:
                         return {'action': 'collect', 'params': {'type': 'food'}}
                     next_pos = self._find_path_to(food_pos)
                     if next_pos:
@@ -328,7 +335,7 @@ class BalancedBrain(Brain):
         # Consider trading when in moderate condition
         if scan['traders'] and max_need < 0.5:
             trader_pos = scan['traders'][0][0]
-            if trader_pos == self.actor.pos:
+            if trader_pos == player_pos:
                 return {'action': 'trade', 'params': {'trader': scan['traders'][0][1]}}
             # Only go to trader if close
             if scan['traders'][0][2] <= 3:
@@ -366,17 +373,14 @@ class BalancedBrain(Brain):
         
         return {'action': 'rest', 'params': {}}
 
-#-- Opportunist Brain --
-#seeks traders and high-value resources
-#larger vision radius
-#prioritizes action over safety
-#aggressively explores
+
 class OpportunistBrain(Brain):
     """Opportunistic play style: seeks traders and high-value resources."""
     
     def decide_action(self) -> Dict[str, Any]:
         needs = self._assess_needs()
         scan = self.vision.scan_area(radius=8)
+        player_pos = self.vision.get_player_pos()
         
         # Only handle truly critical situations
         if needs['health'] > 0.8:
@@ -385,7 +389,7 @@ class OpportunistBrain(Brain):
         if needs['water'] > 0.75:
             water_pos = self.vision.find_nearest('water', scan)
             if water_pos:
-                if water_pos == self.actor.pos:
+                if water_pos == player_pos:
                     return {'action': 'collect', 'params': {'type': 'water'}}
                 next_pos = self._find_path_to(water_pos)
                 if next_pos:
@@ -394,7 +398,7 @@ class OpportunistBrain(Brain):
         if needs['food'] > 0.75:
             food_pos = self.vision.find_nearest('food', scan)
             if food_pos:
-                if food_pos == self.actor.pos:
+                if food_pos == player_pos:
                     return {'action': 'collect', 'params': {'type': 'food'}}
                 next_pos = self._find_path_to(food_pos)
                 if next_pos:
@@ -403,7 +407,7 @@ class OpportunistBrain(Brain):
         # Prioritize traders
         if scan['traders']:
             trader_pos = scan['traders'][0][0]
-            if trader_pos == self.actor.pos:
+            if trader_pos == player_pos:
                 return {'action': 'trade', 'params': {'trader': scan['traders'][0][1]}}
             next_pos = self._find_path_to(trader_pos)
             if next_pos:
@@ -412,7 +416,7 @@ class OpportunistBrain(Brain):
         # Seek any resources opportunistically
         if scan['resources']:
             target = scan['resources'][0][0]
-            if target == self.actor.pos:
+            if target == player_pos:
                 item_type = scan['resources'][0][1]
                 return {'action': 'collect', 'params': {'type': item_type}}
             next_pos = self._find_path_to(target)
