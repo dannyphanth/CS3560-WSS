@@ -1,11 +1,9 @@
-# world/map.py
-
 import random
 from typing import List, Tuple
-
 import arcade
-
 from .terrain import Terrain, PLAINS, FOREST, MOUNTAIN, DESERT, WATER
+
+
 
 TILE_SIZE = 32  # pixels per tile
 

@@ -1,6 +1,8 @@
 import arcade
 from typing import Optional
 
+# Import custom classes
+from items.bonuses import FoodBonus, WaterBonus, GoldBonus, RepeatingFoodFountain
 from world.map import World, TILE_SIZE
 from actors.player import Player
 from actors.trader import Trader

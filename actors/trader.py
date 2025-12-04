@@ -1,3 +1,4 @@
+import random
 import arcade
 
 TILE_SIZE = 32  # pixels per tile
