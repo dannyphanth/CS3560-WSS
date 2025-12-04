@@ -9,7 +9,7 @@ class Player:
     def __init__(self, name, location):
         self.name = name
         self.location = location  # (x, y) tuple
-        self.sprite = arcade.Sprite("assets/player.png", scale=0.5)  # Load player sprite
+        self.sprite = arcade.Sprite("assets/player.png", scale = 0.03)  # Load player sprite
         self.sprite.center_x = location[0] * TILE_SIZE + TILE_SIZE // 2
         self.sprite.center_y = location[1] * TILE_SIZE + TILE_SIZE // 2
 
@@ -41,7 +41,8 @@ class Player:
     def evaluate_counter_offer(self, counter_offer):
         # Simple temp logic: accept if quantity is less than or equal to 10
         return counter_offer['quantity'] <= 10
-
+    
     def draw(self):
-        self.sprite.draw()
-
+        sprite_list = arcade.SpriteList()
+        self.add_to_sprite_list(sprite_list)
+        sprite_list.draw()

@@ -40,12 +40,11 @@ class Game(arcade.Window):
         """Arcade draw handler – draws the world each frame."""
         #Clears the screen and draws the world
         self.clear()
-
-        if self.world is not None:
+        if self.world:
             self.world.draw()
-        if self.player is not None:
+        if self.player:
             self.player.draw()
-        if self.trader is not None:
+        if self.trader:
             self.trader.draw()
 
 
