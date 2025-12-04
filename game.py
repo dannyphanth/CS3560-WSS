@@ -1,7 +1,11 @@
 import arcade
 from typing import Optional
 
+# Import custom classes
+from items.bonuses import FoodBonus, WaterBonus, GoldBonus, RepeatingFoodFountain
 from world.map import World, TILE_SIZE
+from actors.player import Player
+from actors.trader import Trader
 
 
 SCREEN_WIDTH = 800
@@ -17,6 +21,8 @@ class Game(arcade.Window):
 
         # The game world (grid of Terrain). Created in setup().
         self.world: Optional[World] = None
+        self.player = None
+        self.trader = None
 
         # Optional: set a background color behind the tiles
         arcade.set_background_color(arcade.color.BLACK)
@@ -29,14 +35,19 @@ class Game(arcade.Window):
 
         #Creates a new world instance!
         self.world = World(width_in_tiles, height_in_tiles, difficulty="normal", tile_size=TILE_SIZE)
+        self.player = Player("Player1", (0, 0))  # Example starting position
+        self.trader = Trader("Trader1", (5, 5))  # Example starting position
 
     def on_draw(self) -> None:
         """Arcade draw handler – draws the world each frame."""
         #Clears the screen and draws the world
         self.clear()
-
-        if self.world is not None:
+        if self.world:
             self.world.draw()
+        if self.player:
+            self.player.draw()
+        if self.trader:
+            self.trader.draw()
 
 
 def main() -> None:
