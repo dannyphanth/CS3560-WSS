@@ -1,5 +1,6 @@
 import arcade
 from typing import Optional
+import random
 
 # Import custom classes
 from items.bonuses import FoodBonus, WaterBonus, GoldBonus, RepeatingFoodFountain
@@ -11,6 +12,7 @@ from actors.trader import Trader
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 SCREEN_TITLE = "Wilderness Survival"
+ITEM_TYPES = [WaterBonus, FoodBonus, GoldBonus, RepeatingFoodFountain]
 
 
 class Game(arcade.Window):
@@ -23,7 +25,8 @@ class Game(arcade.Window):
         self.world: Optional[World] = None
         self.player = None
         self.trader = None
-
+        self.items = []
+        
         # Optional: set a background color behind the tiles
         arcade.set_background_color(arcade.color.BLACK)
 
@@ -35,15 +38,17 @@ class Game(arcade.Window):
 
         #Creates a new world instance!
         self.world = World(width_in_tiles, height_in_tiles, difficulty="normal", tile_size=TILE_SIZE)
-        self.player = Player("Player1", (0, 0))  # Example starting position
-        self.trader = Trader("Trader1", (5, 5))  # Example starting position
+        # Why do we create a player and trader here and once again below? -- carlos
+        self.player = Player("Player1", (0, 0))  # With starting position
+        self.trader = Trader("Trader1", (5, 5))  # With starting position
+        self.CreateItems(width_in_tiles, height_in_tiles, difficulty="normal", tiles_size=TILE_SIZE)
 
         # Preserve existing inventories if setup is called again
         player_inventory = self.player.inventory if self.player else None
         trader_inventory = self.trader.inventory if self.trader else None
 
-        self.player = Player("Player1", 100, (0, 0), inventory=player_inventory)  # Example starting position
-        self.trader = Trader("Trader1", (5, 5), inventory=trader_inventory if trader_inventory else None)  # Example starting position
+        self.player = Player("Player1", 100, (0, 0), inventory=player_inventory)  # With starting position
+        self.trader = Trader("Trader1", (5, 5), inventory=trader_inventory if trader_inventory else None)  # With starting position
 
     def on_draw(self) -> None:
         """Arcade draw handler – draws the world each frame."""
@@ -55,7 +60,10 @@ class Game(arcade.Window):
             self.player.draw()
         if self.trader:
             self.trader.draw()
-
+        if self.items:
+            for item in self.items:
+                item.draw()
+                
     def on_key_press(self, symbol, modifiers):
         if self.player:
             current_location = self.player.location
@@ -90,6 +98,36 @@ class Game(arcade.Window):
         else:
             print("Player has no strength left to move.")
 
+
+    def CreateItems(self, width_in_tiles, height_in_tiles, difficulty="normal", tiles_size=TILE_SIZE): 
+        """
+        Populates self.items with randomly placed items.
+        """
+        # Clear existing items if needed
+        self.items.clear()
+
+        # How many items? Scale by difficulty
+        area = width_in_tiles * height_in_tiles
+
+        if difficulty == "easy":
+            item_count = max(5, area // 50)
+        elif difficulty == "hard":
+            item_count = max(2, area // 120)
+        else:  # normal
+            item_count = max(20, area // 80)
+
+        for _ in range(item_count):
+            # Choose a random item class
+            item_class = random.choice(ITEM_TYPES)
+
+            # Random tile coordinates
+            x = random.randint(0, width_in_tiles - 1)
+            y = random.randint(0, height_in_tiles - 1)
+
+            item = item_class(x, y)
+            self.items.append(item)
+
+
 def main() -> None:
     """Entry point when running this module directly."""
     window = Game()
@@ -99,5 +137,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-

@@ -11,44 +11,56 @@ if TYPE_CHECKING:
 
 @dataclass
 class FoodBonus(Item):
-    amount: int = 10
-
-    def __init__(self, amount: int = 10):
-        super().__init__(name="Food Bonus", symbol="F")
-        self.amount = amount
+    def __init__(self, tile_x, tile_y, amount=10):
+        super().__init__(
+            name="Food Bonus",
+            texture_path="assets/food.png",
+            tile_x=tile_x,
+            tile_y=tile_y,
+            amount=amount
+        )
 
     def apply(self, player: "Player") -> None:
         player.food = min(player.max_food, player.food + self.amount)
 
 @dataclass
 class WaterBonus(Item):
-    amount: int = 10
-
-    def __init__(self, amount: int = 10):
-        super().__init__(name="Water Bonus", symbol="W")
-        self.amount = amount
+    def __init__(self, tile_x, tile_y, amount=10):
+        super().__init__(
+            name="Water Bonus",
+            texture_path="assets/water.png",
+            tile_x=tile_x,
+            tile_y=tile_y,
+            amount=amount
+        )
 
     def apply(self, player: "Player") -> None:
         player.water = min(player.max_water, player.water + self.amount)
 
 @dataclass
 class GoldBonus(Item):
-    amount: int = 1
-
-    def __init__(self, amount: int = 1):
-        super().__init__(name="Gold", symbol="G")
-        self.amount = amount
+    def __init__(self, tile_x, tile_y, amount=1):
+        super().__init__(
+            name="Gold Bonus",
+            texture_path="assets/gold.png",
+            tile_x=tile_x,
+            tile_y=tile_y,
+            amount=amount
+        )
 
     def apply(self, player: "Player") -> None:
         player.gold += self.amount
 
 @dataclass
 class RepeatingFoodFountain(RepeatingItem):
-    amount: int = 2
-
-    def __init__(self, amount: int = 2):
-        super().__init__(name="Food Fountain", symbol="f")
-        self.amount = amount
+    def __init__(self, tile_x, tile_y, amount=2):
+        super().__init__(
+            name="Food Fountain",
+            texture_path="assets/byson.png",
+            tile_x=tile_x,
+            tile_y=tile_y,
+            amount=amount
+        )
 
     def apply(self, player: "Player") -> None:
         player.food = min(player.max_food, player.food + self.amount)
