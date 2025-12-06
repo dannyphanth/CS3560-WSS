@@ -1,20 +1,18 @@
-import random
-import arcade
-from systems.inventory import Inventory
+from actors.actor import Actor
+from dataclasses import dataclass
+from world.map import TILE_SIZE
 
-TILE_SIZE = 32  # pixels per tile
 
-class Trader:
-    def __init__(self, name, location, inventory=Inventory(gold=100, food=50, water=50, max_items=300)):
-        self.name = name
-        self.location = location  # (x, y) tuple
-        self.sprite = arcade.Sprite("assets/trader.png", scale = 0.035)  # Load trader sprite
-        self.sprite.center_x = location[0] * TILE_SIZE + TILE_SIZE // 2
-        self.sprite.center_y = location[1] * TILE_SIZE + TILE_SIZE // 2
-        self.inventory = inventory
+@dataclass(eq=False)
+class Trader(Actor):
+    def __init__(self, name, location, inventory):
+        super().__init__(
+            name = name,
+            location = location,
+            inventory = inventory,
+            texture_path="assets/trader.png",
+        )
 
-    def add_to_sprite_list(self, sprite_list):
-        sprite_list.append(self.sprite)
 
     def evaluate_trade_offer(self, player_items_presenting, player_items_requesting):
         # accept only if quantity is reasonable AND trader has stock
@@ -41,13 +39,6 @@ class Trader:
             # fall-through to counter-offer
             return False
 
-    def update_inventory_after_trade(self, item_given, quantity_given, item_requested, quantity_requested):
-        # update trader's inventory after trade
-        self.inventory.spend(item_given, quantity_given)
-        self.inventory.add(item_requested, quantity_requested)
-        print(f"Updated {self.name}")
-        print(f"Inventory: ", end='')
-        self.show_inventory()
 
     def counter_trade_offer(self, player_items_presenting, player_items_requesting):
         # simple logic: counter with some quantity that trader is guaranteed to have
@@ -77,14 +68,3 @@ class Trader:
             'item_given': item_given,
             'quantity_given': counter_quantity_given
         }
-    
-    def draw(self):
-        sprite_list = arcade.SpriteList()
-        self.add_to_sprite_list(sprite_list)
-        sprite_list.draw()
-
-    def show_inventory(self): 
-        self.inventory.show_inventory()
-
-    def random_resource(self): 
-        return self.inventory.random_resource()

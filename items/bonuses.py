@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from .base import Item, RepeatingItem
+from items.base import *
 
 if TYPE_CHECKING:
     from ..actors.player import Player

@@ -1,21 +1,43 @@
-import arcade
+from actors.actor import Actor
 import random
-from systems.inventory import Inventory
+from dataclasses import dataclass
+from world.map import TILE_SIZE
 
-TILE_SIZE = 32  # pixels per tile
 
 # Player can propose tradeOffer to Trader actors
 
-class Player:
+@dataclass(eq=False)
+class Player(Actor):
     # Initialize player with name and location (left/bottommost cell)
-    def __init__(self, name, strength = 100, location = (0,0), inventory=Inventory(gold=100, food=50, water=50, max_items=300)):
-        self.name = name
-        self.location = location  # (x, y) tuple
-        self.strength = strength
-        self.inventory = inventory
-        self.sprite = arcade.Sprite("assets/player.png", scale = 0.03)  # Load player sprite
+    def __init__(self, name, location, inventory, strength=100):
+        super().__init__(
+            name = name,
+            location = location,
+            inventory = inventory,
+            texture_path="assets/player.png",
+        )
+        self.strength: int = strength
+      
+
+    def set_location(self, location):
+        self.location = location
         self.sprite.center_x = location[0] * TILE_SIZE + TILE_SIZE // 2
         self.sprite.center_y = location[1] * TILE_SIZE + TILE_SIZE // 2
+        self.strength -= 1  # reduce strength by 1 for each movement
+        # print(f"Player {self.name} moved to {self.location}. Remaining strength: {self.strength}")
+      
+
+    def is_at_item_location(self, itemList):
+        for item in itemList[:]:   # iterate over a copy
+            if self.location == item.location:
+                item.apply(self)
+                item.sprite.kill() # this kills the sprite in every arcade.sprite_list
+                itemList.remove(item)
+
+        print(f"Updated {self.name}")
+        print(f"Inventory: ", end='')
+        self.show_inventory()
+
 
     def propose_trade(self, trader, player_items_presenting, player_items_requesting):
         # player_items_presenting is a dictionary consisting of what the player is giving {'item': item, 'quantity': quantity}
@@ -75,40 +97,9 @@ class Player:
             print(f"Trade rejected by {trader.name}.")
 
 
-    def update_inventory_after_trade(self, item_given, quantity_given, item_requested, quantity_requested):
-        # update player's inventory after a trade
-        self.inventory.spend(item_given, quantity_given)
-        self.inventory.add(item_requested, quantity_requested)
-        print(f"Updated {self.name}")
-        print(f"Inventory: ", end='')
-        self.show_inventory()
-
     def evaluate_counter_offer(self, counter_offer):
         # Simple temp logic: accept if quantity is less than or equal to 10
         return counter_offer['quantity'] <= 10
-    
-    def draw(self):
-        sprite_list = arcade.SpriteList()
-        sprite_list.append(self.sprite)
-        sprite_list.draw()
-
-    def set_location(self, location):
-        self.location = location
-        self.sprite.center_x = location[0] * TILE_SIZE + TILE_SIZE // 2
-        self.sprite.center_y = location[1] * TILE_SIZE + TILE_SIZE // 2
-        self.strength -= 1  # reduce strength by 1 for each movement
-        # print(f"Player {self.name} moved to {self.location}. Remaining strength: {self.strength}")
-
-    def is_at_item_location(self, itemList):
-        for item in itemList[:]:   # iterate over a copy
-            if self.location == item.location:
-                item.apply(self)
-                item.sprite.kill() # this kills the sprite in every arcade.sprite_list
-                itemList.remove(item)
-
-        print(f"Updated {self.name}")
-        print(f"Inventory: ", end='')
-        self.show_inventory()
 
 
     def is_at_trader_location(self, trader):
@@ -150,9 +141,3 @@ class Player:
                     print(f"Player has too little {item_offered} to offer in trade (must leave at least 1 in inventory).")
             else:
                 print("Player has no inventory to trade.")
-
-    def show_inventory(self): 
-        self.inventory.show_inventory()
-
-    def random_resource(self): 
-        return self.inventory.random_resource()

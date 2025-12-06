@@ -41,7 +41,7 @@ class Game(arcade.Window):
         #Creates a new world instance!
         self.world = World(width_in_tiles, height_in_tiles, difficulty="normal", tile_size=TILE_SIZE)
 
-        self.player = Player("Player1", strength=1000, location=(0, 0), inventory=Inventory(12, 12, 12, max_items=300))  # With starting position
+        self.player = Player("Player1", location=(0, 0), inventory=Inventory(12, 12, 12, max_items=300), strength=1000)  # With starting position
         self.trader = Trader("Trader1", location=(1, 1), inventory=Inventory(100, 50, 50, max_items=3000))  # With starting position
 
         self.place_items(width_in_tiles, height_in_tiles, difficulty="normal", tiles_size=TILE_SIZE)
