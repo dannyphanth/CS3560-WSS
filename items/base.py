@@ -1,3 +1,10 @@
+'''
+Docstring for items.base
+It's important that we have (eq=False) after the @dataclass because this ensures
+that the instances are compared based off UNIQUE identifiers such as id(). Instead 
+of comparing instances off of equality (like "do two instances have the same name")
+'''
+
 from __future__ import annotations
 from world.map import World, TILE_SIZE
 import arcade 
@@ -8,17 +15,20 @@ from typing import TYPE_CHECKING, Tuple
 if TYPE_CHECKING:
     from ..actors.player import Player
 
-@dataclass
+@dataclass(eq=False)
 class Item(ABC):
-    def __init__(self, name, texture_path, tile_x, tile_y, amount=0):
-        self.name = name
-        self.amount = amount
-        self.tile_x = tile_x
-        self.tile_y = tile_y
-        self.sprite = arcade.Sprite(texture_path, scale=0.75)
-        self.sprite.center_x = tile_x * TILE_SIZE + TILE_SIZE // 2 
-        self.sprite.center_y = tile_y * TILE_SIZE + TILE_SIZE // 2
+    # Class-level shared sprite list
+    sprite_list = arcade.SpriteList()
 
+    def __init__(self, name, texture_path, location, amount=0):
+        self.name = name
+        self.sprite = arcade.Sprite(texture_path, scale=0.75)
+        self.amount = amount
+        self.location = location # (x, y) tuple
+        self.sprite.center_x = location[0] * TILE_SIZE + TILE_SIZE // 2 
+        self.sprite.center_y = location[1] * TILE_SIZE + TILE_SIZE // 2
+        self.sprite_list.append(self.sprite)
+        
     @abstractmethod
     def apply(self, player: "Player") -> None:
         raise NotImplementedError
@@ -26,26 +36,15 @@ class Item(ABC):
     def on_pickup(self, player: "Player") -> bool:
         self.apply(player)
         return True  # default: one-shot item
-
     
-    def add_to_sprite_list(self, sprite_list):
-        sprite_list.append(self.sprite)
 
-    def draw(self):
-        sprite_list = arcade.SpriteList()
-        self.add_to_sprite_list(sprite_list)
-        # print(f"The item location: {self.sprite.center_x},{self.sprite.center_y}")
-        sprite_list.draw()
-
-
-@dataclass
+@dataclass(eq=False)
 class RepeatingItem(Item):
-    def __init__(self, name, texture_path, tile_x, tile_y, amount=0):
+    def __init__(self, name, texture_path, location, amount=0):
         super().__init__(
             name=name,
             texture_path=texture_path,
-            tile_x=tile_x,
-            tile_y=tile_y,
+            location=location,
             amount=amount,
         )
         self.used_this_round = False # internal state if needed
