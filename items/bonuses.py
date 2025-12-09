@@ -1,54 +1,69 @@
+'''
+Docstring for items.base
+It's important that we have (eq=False) after the @dataclass because this ensures
+that the instances are compared based off UNIQUE identifiers such as id(). Instead 
+of comparing instances off of equality (like "do two instances have the same name")
+'''
+
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from .base import Item, RepeatingItem
+from items.base import *
 
 if TYPE_CHECKING:
     from ..actors.player import Player
 
 # ---------- One-time bonuses ----------
 
-@dataclass
+@dataclass(eq=False)
 class FoodBonus(Item):
-    amount: int = 10
-
-    def __init__(self, amount: int = 10):
-        super().__init__(name="Food Bonus", symbol="F")
-        self.amount = amount
+    def __init__(self, location, amount=10):
+        super().__init__(
+            name="Food Bonus",
+            texture_path="assets/food.png",
+            location=tuple(location),
+            amount=amount
+        )
 
     def apply(self, player: "Player") -> None:
-        player.food = min(player.max_food, player.food + self.amount)
+        player.food = min(player.inventory.max_items, player.inventory.food + self.amount)
 
-@dataclass
+@dataclass(eq=False)
 class WaterBonus(Item):
-    amount: int = 10
-
-    def __init__(self, amount: int = 10):
-        super().__init__(name="Water Bonus", symbol="W")
-        self.amount = amount
+    def __init__(self, location, amount=10):
+        super().__init__(
+            name="Water Bonus",
+            texture_path="assets/water.png",
+            location=tuple(location),
+            amount=amount
+        )
 
     def apply(self, player: "Player") -> None:
-        player.water = min(player.max_water, player.water + self.amount)
+        player.inventory.water = min(player.inventory.max_items, player.inventory.water + self.amount)
 
-@dataclass
+@dataclass(eq=False)
 class GoldBonus(Item):
-    amount: int = 1
-
-    def __init__(self, amount: int = 1):
-        super().__init__(name="Gold", symbol="G")
-        self.amount = amount
+    def __init__(self, location, amount=1):
+        super().__init__(
+            name="Gold Bonus",
+            texture_path="assets/gold.png",
+            location=tuple(location),
+            amount=amount
+        )
 
     def apply(self, player: "Player") -> None:
-        player.gold += self.amount
+        player.inventory.gold = min(player.inventory.max_items, player.inventory.gold + self.amount)
 
-@dataclass
+@dataclass(eq=False)
 class RepeatingFoodFountain(RepeatingItem):
-    amount: int = 2
-
-    def __init__(self, amount: int = 2):
-        super().__init__(name="Food Fountain", symbol="f")
-        self.amount = amount
+    def __init__(self, location, amount=2):
+        super().__init__(
+            name="Food Fountain",
+            texture_path="assets/byson.png",
+            location=tuple(location),
+            amount=amount
+        )
 
     def apply(self, player: "Player") -> None:
-        player.food = min(player.max_food, player.food + self.amount)
+        player.inventory.food = min(player.inventory.max_items, player.inventory.food + self.amount)

@@ -1,23 +1,43 @@
-import arcade
+from actors.actor import Actor
 import random
+from dataclasses import dataclass
+from world.map import TILE_SIZE
 
-TILE_SIZE = 32  # pixels per tile
 
 # Player can propose tradeOffer to Trader actors
 
-class Player:
+@dataclass(eq=False)
+class Player(Actor):
     # Initialize player with name and location (left/bottommost cell)
-    def __init__(self, name, strength = 100, location = (0,0), inventory = None):
-        self.name = name
-        self.location = location  # (x, y) tuple
-        self.strength = strength
-        self.inventory = {"gold": 100, "food": 50, "water": 50}
-        self.sprite = arcade.Sprite("assets/player.png", scale = 0.03)  # Load player sprite
+    def __init__(self, name, location, inventory, strength=100):
+        super().__init__(
+            name = name,
+            location = location,
+            inventory = inventory,
+            texture_path="assets/player.png",
+        )
+        self.strength: int = strength
+      
+
+    def set_location(self, location):
+        self.location = location
         self.sprite.center_x = location[0] * TILE_SIZE + TILE_SIZE // 2
         self.sprite.center_y = location[1] * TILE_SIZE + TILE_SIZE // 2
+        self.strength -= 1  # reduce strength by 1 for each movement
+        # print(f"Player {self.name} moved to {self.location}. Remaining strength: {self.strength}")
+      
 
-    def add_to_sprite_list(self, sprite_list):
-        sprite_list.append(self.sprite)
+    def is_at_item_location(self, itemList):
+        for item in itemList[:]:   # iterate over a copy
+            if self.location == item.location:
+                item.apply(self)
+                item.sprite.kill() # this kills the sprite in every arcade.sprite_list
+                itemList.remove(item)
+
+        print(f"Updated {self.name}")
+        print(f"Inventory: ", end='')
+        self.show_inventory()
+
 
     def propose_trade(self, trader, player_items_presenting, player_items_requesting):
         # player_items_presenting is a dictionary consisting of what the player is giving {'item': item, 'quantity': quantity}
@@ -29,17 +49,20 @@ class Player:
         quantity_requested = player_items_requesting['quantity']
 
         # print current inventories
-        print(f"\nCurrent Player Inventory: {self.inventory}")
-        print(f"Current Trader Inventory: {trader.inventory}")
+        print(f"\nCurrent Player Inventory: ")
+        self.show_inventory()
+        print(f"Current Trader Inventory:")
+        trader.show_inventory()
         print(f"\n------------- Trade Proposal from {self.name} to {trader.name} -----------\n")
-        print(f"Player offers {quantity_given} of {item_given} in exchange for {quantity_requested} of {item_requested}.\n")
+        print(f"{self.name} offers {quantity_given} of {item_given} in exchange for {quantity_requested} of {item_requested}.\n")
 
         if trader.evaluate_trade_offer(player_items_presenting, player_items_requesting):
             self.update_inventory_after_trade(item_given, quantity_given, item_requested, quantity_requested)
-            trader.inventory[item_given] = trader.inventory.get(item_given, 0) + quantity_given  # add items to trader's inventory
-            trader.inventory[item_requested] = trader.inventory.get(item_requested, 0) - quantity_requested  # deduct requested items from trader's inventory
+            trader.inventory.add(item_given, quantity_given) # add items to trader's inventory
+            trader.inventory.spend(item_requested, quantity_requested) # deduct requested items from trader's inventory
         
-            print(f"Updated Trader {trader.name} Inventory: {trader.inventory}\n")
+            print(f"Updated Trader {trader.name} Inventory:")
+            trader.show_inventory()
             print("------------------ End of Trade Proposal ----------------\n")
         
         elif trader.counter_trade_offer(player_items_presenting, player_items_requesting):
@@ -74,30 +97,12 @@ class Player:
             print(f"Trade rejected by {trader.name}.")
 
 
-    def update_inventory_after_trade(self, item_given, quantity_given, item_requested, quantity_requested):
-        # update player's inventory after a trade
-        self.inventory[item_given] = self.inventory.get(item_given, 0) - quantity_given
-        self.inventory[item_requested] = self.inventory.get(item_requested, 0) + quantity_requested
-        print(f"Updated Player {self.name} Inventory: {self.inventory}")
-
     def evaluate_counter_offer(self, counter_offer):
         # Simple temp logic: accept if quantity is less than or equal to 10
         return counter_offer['quantity'] <= 10
-    
-    def draw(self):
-        sprite_list = arcade.SpriteList()
-        self.add_to_sprite_list(sprite_list)
-        sprite_list.draw()
-
-    def set_location(self, location):
-        self.location = location
-        self.sprite.center_x = location[0] * TILE_SIZE + TILE_SIZE // 2
-        self.sprite.center_y = location[1] * TILE_SIZE + TILE_SIZE // 2
-        self.strength -= 1  # reduce strength by 1 for each movement
-        print(f"Player {self.name} moved to {self.location}. Remaining strength: {self.strength}")
 
 
-    def is_at_same_location(self, trader):
+    def is_at_trader_location(self, trader):
         tile_above = (trader.location[0], trader.location[1] + 1)
         tile_left = (trader.location[0] - 1, trader.location[1])
         tile_right = (trader.location[0] + 1, trader.location[1])
@@ -107,14 +112,14 @@ class Player:
             print("Player is adjacent to Trader, initiating trade...")
 
             # randomize the trade offer
-            if hasattr(self, 'inventory') and self.inventory:
+            if self.inventory:
                 # prevent trading the entire inventory (must leave at least 1)
-                item_offered = random.choice(list(self.inventory.keys()))  
-                max_quantity_available = self.inventory.get(item_offered, 0)
+                item_offered = self.random_resource()
+                max_quantity_available = self.inventory.balance(item_offered)
                 
                 # max_offerable is at least 1 less than total; if available is 1 or 0, max_offerable is 0 or less
                 max_offerable = max(0, max_quantity_available - 1) 
-                
+
                 # quantity must be between 1 and max_offerable; if max_offerable < 1, quantity is 0
                 if max_offerable >= 1:
                     quantity_offered = random.randint(1, max_offerable)
@@ -124,7 +129,7 @@ class Player:
                 player_items_presenting = {'item': item_offered, 'quantity': quantity_offered}
 
                 # randomly pick item to request (quantity is arbitrary, up to 10 for simplicity)
-                item_requested = random.choice(list(self.inventory.keys())) 
+                item_requested = self.random_resource()
                 quantity_requested = random.randint(1, 10) 
                 
                 player_items_requesting = {'item': item_requested, 'quantity': quantity_requested}
