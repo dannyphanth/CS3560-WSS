@@ -10,9 +10,7 @@ from actors.player import Player
 from actors.trader import Trader
 from systems.inventory import Inventory
 
-from ai.ai import CautiousBrain, AggressiveBrain, BalancedBrain, OpportunistBrain
-
-SCREEN_WIDTH = 800
+SCREEN_WIDTH = 1000 
 SCREEN_HEIGHT = 600
 SCREEN_TITLE = "Wilderness Survival"
 ITEM_TYPES = [WaterBonus, FoodBonus, GoldBonus, RepeatingFoodFountain]
@@ -21,12 +19,16 @@ ITEM_TYPES = [WaterBonus, FoodBonus, GoldBonus, RepeatingFoodFountain]
 class Game(arcade.Window):
     """Main Arcade window for the Wilderness Survival game."""
 
+    #===============================================================
+    # setting up
+    #===============================================================
     def __init__(self) -> None:
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
 
         # The game world (grid of Terrain). Created in setup().
         self.world: Optional[World] = None
-        
+        self.turn_timer = 0
+        self.turn_interval = 0.1
         self.ai_player: Optional[Player] = None # TODO: DECIDE IF I NEED
         self.player = None
         self.trader = None
@@ -34,6 +36,7 @@ class Game(arcade.Window):
         
         # Optional: set a background color behind the tiles
         arcade.set_background_color(arcade.color.BLACK)
+
 
     def setup(self) -> None:
         """Create a new world instance. Call this before starting the game."""
@@ -46,15 +49,15 @@ class Game(arcade.Window):
         
         # Now that world exists, spawn AI player
         spawn_pos = (5, 5)
-        self.ai_player = Player(name="AI Player", location=spawn_pos)
+        # self.ai_player = Player(name="AI Player", location=spawn_pos)
         
         # Attach AI brain to the player
-        self.ai_player.brain = BalancedBrain(self.ai_player, self.world)
+        # self.ai_player.brain = BalancedBrain(self.ai_player, self.world)
 
         self.player = Player("Player1", location=(0, 0), inventory=Inventory(12, 12, 12, max_items=300), strength=1000)  # With starting position
         self.trader = Trader("Trader1", location=(1, 1), inventory=Inventory(100, 50, 50, max_items=3000))  # With starting position
-
         self.place_items(width_in_tiles, height_in_tiles, difficulty="normal", tiles_size=TILE_SIZE)
+
 
     def on_draw(self) -> None:
         """Arcade draw handler – draws the world each frame."""
@@ -70,80 +73,6 @@ class Game(arcade.Window):
             # because the item instances share a sprite_list, 
             # simply use one item to draw the entire list
             self.items[0].sprite_list.draw()
-
-
-    def on_update(self, delta_time: float):
-        """Called every frame to update game state."""
-        if self.world is None or self.ai_player is None:
-            return
-        
-        # AI decides what to do
-        action = self.ai_player.brain.decide_action()
-        
-        # Execute chosen action
-        # You'll need to implement this based on your systems.py
-        # Example:
-        if action['action'] == 'move':
-            new_pos = action['params']['pos']
-            self.ai_player.location = new_pos
-            # Update sprite position
-            self.ai_player.sprite.center_x = new_pos[0] * TILE_SIZE + TILE_SIZE // 2
-            self.ai_player.sprite.center_y = new_pos[1] * TILE_SIZE + TILE_SIZE // 2
-            # Apply movement costs (food/water/health changes)
-            # self.world.apply_movement_cost(self.ai_player, new_pos)
-            
-        elif action['action'] == 'rest':
-            # Restore some health
-            # self.ai_player.health = min(self.ai_player.health + 10, self.ai_player.max_health)
-            pass
-            
-        elif action['action'] == 'collect':
-            item_type = action['params']['type']
-            if self.ai_player.pos in self.world.items:
-                # Collect the item
-                # self.world.collect_item(self.ai_player.pos, self.ai_player)
-                pass
-                
-        elif action['action'] == 'trade':
-            trader = action['params']['trader']
-            # Initiate trade
-            # trader.negotiate(self.ai_player)
-            pass
-
-                
-    def on_key_press(self, symbol, modifiers):
-        if self.player:
-            current_location = self.player.location
-        new_location = list(current_location)
-        moved = False
-        
-        if self.player and self.trader and self.player.strength > 0:
-            # get potential location from user input
-            if symbol == arcade.key.LEFT or symbol == arcade.key.A:
-                new_location[0] -= 1
-                moved = True
-            elif symbol == arcade.key.RIGHT or symbol == arcade.key.D:
-                new_location[0] += 1
-                moved = True
-            elif symbol == arcade.key.UP or symbol == arcade.key.W:
-                new_location[1] += 1
-                moved = True
-            elif symbol == arcade.key.DOWN or symbol == arcade.key.S:
-                new_location[1] -= 1
-                moved = True
-
-            # check for tile overlap with trader
-            if moved and tuple(new_location) == self.trader.location:
-                print(f"Movement denied: Player cannot occupy the same tile as {self.trader.name}.")
-                return # block the move
-
-            # movement occurred and move is valid, update player location
-            if moved:
-                self.player.set_location(tuple(new_location)) 
-                self.player.is_at_trader_location(self.trader)
-                self.player.is_at_item_location(self.items)
-        else:
-            print("Player has no strength left to move.")
 
 
     def place_items(self, width_in_tiles, height_in_tiles, difficulty="normal", tiles_size=TILE_SIZE): 
@@ -184,6 +113,97 @@ class Game(arcade.Window):
             item = item_class(tuple([x, y]))
             self.items.append(item)
 
+
+
+    #===============================================================
+    # Turn logic
+    #===============================================================
+
+    def on_update(self, delta_time):
+        """Arcade function called every few seconds to update game state."""
+        self.turn_timer += delta_time
+        if self.turn_timer >= self.turn_interval:
+            self.turn_timer = 0
+            self.play_turn(self.player)  # <-- run your automated logic here
+
+
+    def play_turn(self, player: Player):
+        changed_tiles = False
+        changed_tiles = player.brain.make_move(player, self.trader)
+
+        # now check the actor's location in relation to the map
+        player.is_at_trader_location(self.trader)
+        self.actor_at_item_location(player, self.items)
+        if changed_tiles: 
+            self.actor_moved_to_new_tile(player)
+        
+
+    def actor_moved_to_new_tile(self, player: Player): 
+        terrainObj = self.world.get_terrain(player.location)
+        player.strength - terrainObj.move_cost
+        player.inventory.spend('water', terrainObj.water_cost)
+        player.inventory.spend('food', terrainObj.food_cost)
+        player.printStats()
+        self.trader.printStats()
+                
+
+    def actor_at_item_location(self, player: Player, itemList: list[Item]):
+        pickedUpItem = False
+
+        for item in itemList[:]:   # iterate over a copy
+            if player.location == item.location:
+                pickedUpItem = True
+                # print("Picked up: ", item.amount, item.name)
+                item.apply(player)
+                item.sprite.kill() # this kills the sprite in every arcade.sprite_list
+                itemList.remove(item)
+
+        # if pickedUpItem:
+            # print(f"Updated {player.name}")
+            # print(f"Inventory: ", end='')
+            # player.inventory.show_inventory()
+
+
+    def on_key_press(self, symbol, modifiers):
+        if self.player:
+            current_location = self.player.location
+        new_location = list(current_location)
+        moved = False
+        
+        if self.player and self.trader and self.player.strength > 0:
+            # get potential location from user input
+            if symbol == arcade.key.LEFT or symbol == arcade.key.A:
+                new_location[0] -= 1
+                moved = True
+            elif symbol == arcade.key.RIGHT or symbol == arcade.key.D:
+                new_location[0] += 1
+                moved = True
+            elif symbol == arcade.key.UP or symbol == arcade.key.W:
+                new_location[1] += 1
+                moved = True
+            elif symbol == arcade.key.DOWN or symbol == arcade.key.S:
+                new_location[1] -= 1
+                moved = True
+
+            # check for tile overlap with trader
+            if moved and tuple(new_location) == self.trader.location:
+                print(f"Movement denied: Player cannot occupy the same tile as {self.trader.name}.")
+                return # block the move
+
+            # movement occurred and move is valid, update player location
+            if moved:
+                self.player.set_location(tuple(new_location)) 
+                self.player.is_at_trader_location(self.trader)
+                self.actor_at_item_location(self.player, self.items)
+        else:
+            print("Player has no strength left to move.")
+
+
+
+
+    #===============================================================
+    # Start this file
+    #===============================================================
 
 def main():
     """Main entry point for the game."""

@@ -21,6 +21,11 @@ class Actor:
         self.sprite.center_y = location[1] * TILE_SIZE + TILE_SIZE // 2
 
 
+    def printStats(self): 
+        print(f"Gold\tFood\tWater\tMax Items")
+        print(f"{self.inventory.gold}\t{self.inventory.food}\t{self.inventory.water}\t{self.inventory.max_items}")
+        
+
     def add_to_sprite_list(self, sprite_list):
         sprite_list.append(self.sprite)
 
@@ -29,10 +34,6 @@ class Actor:
         sprite_list = arcade.SpriteList()
         self.add_to_sprite_list(sprite_list)
         sprite_list.draw()
-
-
-    def show_inventory(self): 
-        self.inventory.show_inventory()
 
 
     def random_resource(self): 
@@ -45,6 +46,4 @@ class Actor:
         self.inventory.add(item_requested, quantity_requested)
         print(f"Updated {self.name}")
         print(f"Inventory: ", end='')
-        self.show_inventory()
-
-
+        self.inventory.show_inventory()

@@ -69,16 +69,16 @@ class World:
     # Basic helpers
     # ------------------------------------------------------------------
 
-    def in_bounds(self, x: int, y: int) -> bool:
+    def in_bounds(self, loc: tuple) -> bool:
         """Return True if (x, y) is inside the world grid."""
-        return 0 <= x < self.width and 0 <= y < self.height
+        return 0 <= loc[0] < self.width and 0 <= loc[1] < self.height
 
 
-    def get_terrain(self, x: int, y: int) -> Terrain:
+    def get_terrain(self, loc: tuple) -> Terrain:
         """Return the Terrain at grid cell (x, y)."""
-        if not self.in_bounds(x, y):
-            raise IndexError(f"Cell ({x}, {y}) is outside the world.")
-        return self.grid[y][x]
+        if not self.in_bounds(loc):
+            raise IndexError(f"Cell ({loc[0]}, {loc[1]}) is outside the world.")
+        return self.grid[loc[1]][loc[0]] # for some reason the grid is switched…
 
 
     def spawn_point(self) -> Tuple[int, int]:
@@ -91,12 +91,12 @@ class World:
         return x, y
 
 
-    def is_east_edge(self, x: int, y: int) -> bool:
+    def is_east_edge(self, loc: tuple) -> bool:
         """Return True if (x, y) is on the east edge of the map."""
-        return self.in_bounds(x, y) and x == self.width - 1
+        return self.in_bounds(loc) and loc[0] == self.width - 1
 
 
-    def neighbors8(self, x: int, y: int) -> List[Tuple[int, int]]:
+    def neighbors8(self, loc: tuple) -> List[Tuple[int, int]]:
         """
         Return all 8 neighbors (including diagonals) that are inside the map.
         Useful later for Vision and pathfinding.
@@ -106,8 +106,8 @@ class World:
             for dy in (-1, 0, 1):
                 if dx == 0 and dy == 0:
                     continue
-                nx = x + dx
-                ny = y + dy
+                nx = loc[0] + dx
+                ny = loc[1] + dy
                 if self.in_bounds(nx, ny):
                     result.append((nx, ny))
         return result

@@ -2,7 +2,7 @@ from actors.actor import Actor
 import random
 from dataclasses import dataclass
 from world.map import TILE_SIZE
-
+from ai.brains import * 
 
 # Player can propose tradeOffer to Trader actors
 
@@ -17,27 +17,21 @@ class Player(Actor):
             texture_path="assets/player.png",
         )
         self.strength: int = strength
-      
+        self.brain: Brain = CautiousBrain()
+
+
+    def printStats(self): 
+        print(f"Gold\tFood\tWater\tStrgth\tMax Items")
+        print(f"{self.inventory.gold}\t{self.inventory.food}\t{self.inventory.water}\t{self.strength}\t{self.inventory.max_items}")
+        
 
     def set_location(self, location):
         self.location = location
         self.sprite.center_x = location[0] * TILE_SIZE + TILE_SIZE // 2
         self.sprite.center_y = location[1] * TILE_SIZE + TILE_SIZE // 2
         self.strength -= 1  # reduce strength by 1 for each movement
-        # print(f"Player {self.name} moved to {self.location}. Remaining strength: {self.strength}")
+        # print(f"{self.name} to {self.location}. Remaining strength: {self.strength}")
       
-
-    def is_at_item_location(self, itemList):
-        for item in itemList[:]:   # iterate over a copy
-            if self.location == item.location:
-                item.apply(self)
-                item.sprite.kill() # this kills the sprite in every arcade.sprite_list
-                itemList.remove(item)
-
-        print(f"Updated {self.name}")
-        print(f"Inventory: ", end='')
-        self.show_inventory()
-
 
     def propose_trade(self, trader, player_items_presenting, player_items_requesting):
         # player_items_presenting is a dictionary consisting of what the player is giving {'item': item, 'quantity': quantity}
@@ -50,9 +44,9 @@ class Player(Actor):
 
         # print current inventories
         print(f"\nCurrent Player Inventory: ")
-        self.show_inventory()
+        self.inventory.show_inventory()
         print(f"Current Trader Inventory:")
-        trader.show_inventory()
+        trader.inventory.show_inventory()
         print(f"\n------------- Trade Proposal from {self.name} to {trader.name} -----------\n")
         print(f"{self.name} offers {quantity_given} of {item_given} in exchange for {quantity_requested} of {item_requested}.\n")
 
@@ -62,7 +56,7 @@ class Player(Actor):
             trader.inventory.spend(item_requested, quantity_requested) # deduct requested items from trader's inventory
         
             print(f"Updated Trader {trader.name} Inventory:")
-            trader.show_inventory()
+            trader.inventory.show_inventory()
             print("------------------ End of Trade Proposal ----------------\n")
         
         elif trader.counter_trade_offer(player_items_presenting, player_items_requesting):
