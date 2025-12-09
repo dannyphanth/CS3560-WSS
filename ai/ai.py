@@ -126,6 +126,8 @@ class Brain(ABC):
         self.world = world
         self.vision = Vision(world, player)
     
+    def make_move(): 
+        
     @abstractmethod
     def decide_action(self) -> Dict[str, Any]:
         """

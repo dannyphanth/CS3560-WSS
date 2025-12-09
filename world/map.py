@@ -1,11 +1,9 @@
-# world/map.py
-
 import random
 from typing import List, Tuple
-
 import arcade
-
 from .terrain import Terrain, PLAINS, FOREST, MOUNTAIN, DESERT, WATER
+
+
 
 TILE_SIZE = 32  # pixels per tile
 
@@ -24,7 +22,7 @@ class World:
         self.difficulty = difficulty.lower()
         self.tile_size = tile_size
 
-        #2D grid: grid[y][x] holds a Terrain object
+        #2D grid: grid[y][x] holds instances of the Terrain object
         self.grid = []  # type: List[List[Terrain]]
 
         #Calls helper method to fill the grid
@@ -51,6 +49,7 @@ class World:
                 row.append(terrain)
             self.grid.append(row)
 
+
     def _terrain_weights_for_difficulty(self, difficulty: str) -> List[float]:
         """
         Decide how common each terrain type is, based on difficulty.
@@ -65,6 +64,7 @@ class World:
         else:  # "normal" or anything else
             return [0.4, 0.2, 0.15, 0.15, 0.10]
 
+
     # ------------------------------------------------------------------
     # Basic helpers
     # ------------------------------------------------------------------
@@ -73,11 +73,13 @@ class World:
         """Return True if (x, y) is inside the world grid."""
         return 0 <= x < self.width and 0 <= y < self.height
 
+
     def get_terrain(self, x: int, y: int) -> Terrain:
         """Return the Terrain at grid cell (x, y)."""
         if not self.in_bounds(x, y):
             raise IndexError(f"Cell ({x}, {y}) is outside the world.")
         return self.grid[y][x]
+
 
     def spawn_point(self) -> Tuple[int, int]:
         """
@@ -88,9 +90,11 @@ class World:
         y = self.height // 2
         return x, y
 
+
     def is_east_edge(self, x: int, y: int) -> bool:
         """Return True if (x, y) is on the east edge of the map."""
         return self.in_bounds(x, y) and x == self.width - 1
+
 
     def neighbors8(self, x: int, y: int) -> List[Tuple[int, int]]:
         """
@@ -107,6 +111,7 @@ class World:
                 if self.in_bounds(nx, ny):
                     result.append((nx, ny))
         return result
+
 
     # ------------------------------------------------------------------
     # Drawing with Arcade

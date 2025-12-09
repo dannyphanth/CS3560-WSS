@@ -1,52 +1,70 @@
-import random
-import arcade
+from actors.actor import Actor
+from dataclasses import dataclass
+from world.map import TILE_SIZE
 
-TILE_SIZE = 32  # pixels per tile
 
-class Trader:
-    def __init__(self, name, location):
-        self.name = name
-        self.location = location  # (x, y) tuple
-        self.sprite = arcade.Sprite("assets/trader.png", scale = 0.035)  # Load trader sprite
-        self.sprite.center_x = location[0] * TILE_SIZE + TILE_SIZE // 2
-        self.sprite.center_y = location[1] * TILE_SIZE + TILE_SIZE // 2
+@dataclass(eq=False)
+class Trader(Actor):
+    def __init__(self, name, location, inventory):
+        super().__init__(
+            name = name,
+            location = location,
+            inventory = inventory,
+            texture_path="assets/trader.png",
+        )
 
-    def add_to_sprite_list(self, sprite_list):
-        sprite_list.append(self.sprite)
 
-        # initialize inventory with random values for food, water, and gold
-        self.inventory = {
-            'food': random.randint(30, 70),
-            'water': random.randint(30, 70),
-            'gold': random.randint(80, 120)
+    def evaluate_trade_offer(self, player_items_presenting, player_items_requesting):
+        # accept only if quantity is reasonable AND trader has stock
+        item_given = player_items_presenting['item']
+        quantity_given = player_items_presenting['quantity']
+
+        item_requested = player_items_requesting['item']
+        quantity_requested = player_items_requesting['quantity']
+
+        trader_has_stock = self.inventory.balance(item_requested) >= quantity_requested
+        
+        # fairness condition: player must offer at least half the quantity they are requesting (e.g., offer 5 gold for 10 water)
+        is_reasonable_offer = quantity_given >= (quantity_requested / 2)
+
+        if trader_has_stock and is_reasonable_offer:
+            print(f"Trade accepted: {self.name} trades {quantity_requested} of {item_requested} for {quantity_given} of {item_given}.\n")
+            return True
+        elif not trader_has_stock:
+            print(f"Trade rejected: {self.name} does not have enough {item_requested}.")
+            # fall-through to counter-offer
+            return False
+        elif not is_reasonable_offer:
+            print(f"Trade rejected: {self.name} finds the offer quantity too low (requires at least half of requested amount).")
+            # fall-through to counter-offer
+            return False
+
+
+    def counter_trade_offer(self, player_items_presenting, player_items_requesting):
+        # simple logic: counter with some quantity that trader is guaranteed to have
+        # make proportional counter-offer to initial offer
+        
+        item_given = player_items_presenting['item']
+        quantity_given = player_items_presenting['quantity']
+
+        item_requested = player_items_requesting['item']
+        quantity_requested = player_items_requesting['quantity']
+
+        # determine max quantity available for requested item
+        max_quantity_available = self.inventory.balance(item_requested)
+
+        # counter with half the requested quantity, but not more than available
+        counter_quantity_requested = min(max_quantity_available, max(1, quantity_requested // 2))
+
+        # calculate proportional quantity to give
+        proportion = counter_quantity_requested / quantity_requested
+        counter_quantity_given = max(1, int(quantity_given * proportion))
+
+        print(f"\nTrade counter-offer: {self.name} offers {counter_quantity_requested} of {item_requested} for {counter_quantity_given} of {item_given}.\n")
+        
+        return {
+            'item': item_requested,
+            'quantity': counter_quantity_requested,
+            'item_given': item_given,
+            'quantity_given': counter_quantity_given
         }
-
-    def evaluate_trade_offer(self, trade_offer):
-        # simple logic: accept if trader has enough of the requested item
-        item = trade_offer['item']
-        quantity = trade_offer['quantity']
-        return self.inventory.get(item, 0) >= quantity
-    
-    def counter_trade_offer(self, trade_offer):
-        # simple logic: counter with half the requested quantity if not enough
-        item = trade_offer['item']
-        quantity = trade_offer['quantity']
-        if self.inventory.get(item, 0) < quantity:
-            counter_quantity = self.inventory.get(item, 0) // 2
-            if counter_quantity > 0:
-                return {'item': item, 'quantity': counter_quantity}
-        return None
-    
-    def draw(self):
-        sprite_list = arcade.SpriteList()
-        self.add_to_sprite_list(sprite_list)
-        sprite_list.draw()
-    
-    # if current location is a tile from player, allow trade interaction
-    def is_at_same_location(self, trader):
-        tile_above = (trader.location[0], trader.location[1] + 1)
-        tile_left = (trader.location[0] - 1, trader.location[1])
-        tile_right = (trader.location[0] + 1, trader.location[1])
-        tile_below = (trader.location[0], trader.location[1] - 1) 
-        return self.location == tile_above or self.location == tile_left or self.location == tile_right or self.location == tile_below
-    
