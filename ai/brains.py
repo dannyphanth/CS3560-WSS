@@ -9,28 +9,33 @@ class Brain(ABC):
     Subclass to create different play styles.
     """
     
-    def __init__(self):
-        print('defined')
-        # self.vision = Vision()
+    def __init__(self, game, player):
+        self.game = game
+        self.player = player
+        self.vision = Vision(game, player)
     
 
-    def make_move(self, player, trader): 
-        if player:
+    def make_move(self, player, game): 
+        if player and self.vision:
             cur_loc = player.location
 
-        if (random.randrange(0,2)):
-            # standing still 
+
+        if (random.randrange(0,2)): # randomly standing still 
             player.strength += 1
-            return False
+            return
 
+        # for now, just testing the move with a little move across the board
         new_loc = (cur_loc[0] + 1, cur_loc[1] + 0)
-
         if player and player.strength > 0:
             player.set_location(new_loc)
-            return True
+            # now check the player's location in relation to the map
+            player.is_at_trader_location(game.trader)
+            game.actor_at_item_location(player, game.items)
+            game.actor_moved_to_new_tile(player)
+            
         else:
             print("Player has no strength left to move.")
-            return False
+            
         
 
     @abstractmethod

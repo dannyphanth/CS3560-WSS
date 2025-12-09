@@ -9,7 +9,7 @@ from ai.brains import *
 @dataclass(eq=False)
 class Player(Actor):
     # Initialize player with name and location (left/bottommost cell)
-    def __init__(self, name, location, inventory, strength=100):
+    def __init__(self, name, location, inventory, game, strength=100):
         super().__init__(
             name = name,
             location = location,
@@ -17,7 +17,8 @@ class Player(Actor):
             texture_path="assets/player.png",
         )
         self.strength: int = strength
-        self.brain: Brain = CautiousBrain()
+        self.game = game
+        self.brain: Brain = CautiousBrain(game, self)
 
 
     def printStats(self): 

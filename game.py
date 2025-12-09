@@ -29,7 +29,6 @@ class Game(arcade.Window):
         self.world: Optional[World] = None
         self.turn_timer = 0
         self.turn_interval = 0.1
-        self.ai_player: Optional[Player] = None # TODO: DECIDE IF I NEED
         self.player = None
         self.trader = None
         self.items: list[Item] = []
@@ -47,14 +46,7 @@ class Game(arcade.Window):
         # Creates a new world instance!
         self.world = World(width_in_tiles, height_in_tiles, difficulty="normal", tile_size=TILE_SIZE)
         
-        # Now that world exists, spawn AI player
-        spawn_pos = (5, 5)
-        # self.ai_player = Player(name="AI Player", location=spawn_pos)
-        
-        # Attach AI brain to the player
-        # self.ai_player.brain = BalancedBrain(self.ai_player, self.world)
-
-        self.player = Player("Player1", location=(0, 0), inventory=Inventory(12, 12, 12, max_items=300), strength=1000)  # With starting position
+        self.player = Player("Player1", location=(0, 0), inventory=Inventory(12, 12, 12, max_items=300), game=self, strength=1000)  # With starting position
         self.trader = Trader("Trader1", location=(1, 1), inventory=Inventory(100, 50, 50, max_items=3000))  # With starting position
         self.place_items(width_in_tiles, height_in_tiles, difficulty="normal", tiles_size=TILE_SIZE)
 
@@ -124,19 +116,8 @@ class Game(arcade.Window):
         self.turn_timer += delta_time
         if self.turn_timer >= self.turn_interval:
             self.turn_timer = 0
-            self.play_turn(self.player)  # <-- run your automated logic here
+            self.player.brain.make_move(self.player, self)
 
-
-    def play_turn(self, player: Player):
-        changed_tiles = False
-        changed_tiles = player.brain.make_move(player, self.trader)
-
-        # now check the actor's location in relation to the map
-        player.is_at_trader_location(self.trader)
-        self.actor_at_item_location(player, self.items)
-        if changed_tiles: 
-            self.actor_moved_to_new_tile(player)
-        
 
     def actor_moved_to_new_tile(self, player: Player): 
         terrainObj = self.world.get_terrain(player.location)

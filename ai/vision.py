@@ -11,15 +11,17 @@ from abc import ABC, abstractmethod
 class Vision:
     """Scans nearby tiles for resources, hazards, and traders."""
     
-    def __init__(self, world, player):
-        self.world = world
+    def __init__(self, game, player):
+        self.game = game
         self.player = player
+        
     
     def get_player_pos(self) -> Tuple[int, int]:
         """Get player position, checking both 'location' and 'pos' attributes."""
         if hasattr(self.player, 'location'):
             return self.player.location
         return getattr(self.player, 'pos', (0, 0))
+        
     
     def scan_area(self, radius: int = 5) -> Dict[str, Any]:
         """
