@@ -1,6 +1,6 @@
 from typing import Tuple, List, Dict, Optional, Any
 from abc import ABC, abstractmethod
-from ai.ai import *
+from ai.vision import *
 import random
 
 class Brain(ABC):
