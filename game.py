@@ -10,7 +10,6 @@ from actors.player import Player
 from actors.trader import Trader
 from systems.inventory import Inventory
 
-
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 SCREEN_TITLE = "Wilderness Survival"
@@ -23,98 +22,208 @@ class Game(arcade.Window):
     def __init__(self) -> None:
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
 
-        # The game world (grid of Terrain). Created in setup().
+        # Game state: menu or playing 
+        self.state = "menu"
+
+        # Game objects
         self.world: Optional[World] = None
         self.player = None
         self.trader = None
         self.items: list[Item] = []
-        
-        # Optional: set a background color behind the tiles
+
+        # Menu options
+        self.map_sizes = [
+            ("Small", 10, 8),
+            ("Medium", 20, 15),
+            ("Large", 25, 18),
+        ]
+        self.map_size_index = 1  # Medium
+
+        self.difficulties = ["easy", "normal", "hard"]
+        self.difficulty_index = 1  # normal
+
         arcade.set_background_color(arcade.color.BLACK)
 
-    def setup(self) -> None:
-        """Create a new world instance. Call this before starting the game."""
-        # Compute how many tiles fit in the window, based on TILE_SIZE.
-        width_in_tiles = SCREEN_WIDTH // TILE_SIZE
-        height_in_tiles = SCREEN_HEIGHT // TILE_SIZE
+    def setup(self, width_in_tiles: int | None = None,
+              height_in_tiles: int | None = None,
+              difficulty: str = "normal") -> None:
 
-        #Creates a new world instance!
-        self.world = World(width_in_tiles, height_in_tiles, difficulty="normal", tile_size=TILE_SIZE)
+        if width_in_tiles is None or height_in_tiles is None:
+            width_in_tiles = SCREEN_WIDTH // TILE_SIZE
+            height_in_tiles = SCREEN_HEIGHT // TILE_SIZE
 
-        self.player = Player("Player1", location=(0, 0), inventory=Inventory(12, 12, 12, max_items=300), strength=1000)  # With starting position
-        self.trader = Trader("Trader1", location=(1, 1), inventory=Inventory(100, 50, 50, max_items=3000))  # With starting position
+        # Create world
+        self.world = World(
+            width_in_tiles,
+            height_in_tiles,
+            difficulty=difficulty,
+            tile_size=TILE_SIZE,
+        )
 
-        self.place_items(width_in_tiles, height_in_tiles, difficulty="normal", tiles_size=TILE_SIZE)
+        # Player and Trader
+        self.player = Player(
+            "Player1",
+            location=(0, 0),
+            inventory=Inventory(12, 12, 12, max_items=300),
+            strength=1000,
+        )
+        self.trader = Trader(
+            "Trader1",
+            location=(1, 1),
+            inventory=Inventory(100, 50, 50, max_items=3000),
+        )
+
+        # Items
+        self.place_items(width_in_tiles, height_in_tiles, difficulty=difficulty)
+
+        # Switch screen
+        self.state = "playing"
 
     def on_draw(self) -> None:
-        """Arcade draw handler – draws the world each frame."""
-        #Clears the screen and draws the world
         self.clear()
-        if self.world:
-            self.world.draw()
-        if self.player:
-            self.player.draw()
-        if self.trader:
-            self.trader.draw()
-        if self.items:
-            # because the item instances share a sprite_list, 
-            # simply use one item to draw the entire list
-            self.items[0].sprite_list.draw()
-                
+        if self.state == "menu":
+            self.draw_menu()
+        elif self.state == "playing":
+            if self.world:
+                self.world.draw()
+            if self.player:
+                self.player.draw()
+            if self.trader:
+                self.trader.draw()
+            if self.items:
+                self.items[0].sprite_list.draw()
+
+    def draw_menu(self) -> None:
+        arcade.draw_text(
+            "Wilderness Survival",
+            SCREEN_WIDTH / 2,
+            SCREEN_HEIGHT - 100,
+            arcade.color.WHITE,
+            font_size=32,
+            anchor_x="center",
+        )
+
+        size_label, w_tiles, h_tiles = self.map_sizes[self.map_size_index]
+        difficulty = self.difficulties[self.difficulty_index]
+
+        arcade.draw_text(
+            f"Map size: {size_label} ({w_tiles} x {h_tiles})",
+            SCREEN_WIDTH / 2,
+            SCREEN_HEIGHT / 2 + 40,
+            arcade.color.LIGHT_GRAY,
+            font_size=18,
+            anchor_x="center",
+        )
+        arcade.draw_text(
+            "Use LEFT / RIGHT to change map size",
+            SCREEN_WIDTH / 2,
+            SCREEN_HEIGHT / 2 + 10,
+            arcade.color.GRAY,
+            font_size=14,
+            anchor_x="center",
+        )
+
+        arcade.draw_text(
+            f"Difficulty: {difficulty}",
+            SCREEN_WIDTH / 2,
+            SCREEN_HEIGHT / 2 - 40,
+            arcade.color.LIGHT_GRAY,
+            font_size=18,
+            anchor_x="center",
+        )
+        arcade.draw_text(
+            "Use UP / DOWN to change difficulty",
+            SCREEN_WIDTH / 2,
+            SCREEN_HEIGHT / 2 - 70,
+            arcade.color.GRAY,
+            font_size=14,
+            anchor_x="center",
+        )
+
+        arcade.draw_text(
+            "Press ENTER to start",
+            SCREEN_WIDTH / 2,
+            120,
+            arcade.color.YELLOW,
+            font_size=18,
+            anchor_x="center",
+        )
+
     def on_key_press(self, symbol, modifiers):
-        if self.player:
-            current_location = self.player.location
-        new_location = list(current_location)
-        moved = False
-        
-        if self.player and self.trader and self.player.strength > 0:
-            # get potential location from user input
-            if symbol == arcade.key.LEFT or symbol == arcade.key.A:
-                new_location[0] -= 1
-                moved = True
-            elif symbol == arcade.key.RIGHT or symbol == arcade.key.D:
-                new_location[0] += 1
-                moved = True
-            elif symbol == arcade.key.UP or symbol == arcade.key.W:
-                new_location[1] += 1
-                moved = True
-            elif symbol == arcade.key.DOWN or symbol == arcade.key.S:
-                new_location[1] -= 1
-                moved = True
-
-            # check for tile overlap with trader
-            if moved and tuple(new_location) == self.trader.location:
-                print(f"Movement denied: Player cannot occupy the same tile as {self.trader.name}.")
-                return # block the move
-
-            # movement occurred and move is valid, update player location
-            if moved:
-                self.player.set_location(tuple(new_location)) 
-                self.player.is_at_trader_location(self.trader)
-                self.player.is_at_item_location(self.items)
+        if self.state == "menu":
+            self.handle_menu_input(symbol)
         else:
+            self.handle_game_input(symbol)
+
+    def handle_menu_input(self, symbol) -> None:
+        if symbol in (arcade.key.LEFT, arcade.key.A):
+            self.map_size_index = (self.map_size_index - 1) % len(self.map_sizes)
+
+        elif symbol in (arcade.key.RIGHT, arcade.key.D):
+            self.map_size_index = (self.map_size_index + 1) % len(self.map_sizes)
+
+        elif symbol in (arcade.key.UP, arcade.key.W):
+            self.difficulty_index = (self.difficulty_index - 1) % len(self.difficulties)
+
+        elif symbol in (arcade.key.DOWN, arcade.key.S):
+            self.difficulty_index = (self.difficulty_index + 1) % len(self.difficulties)
+
+        elif symbol == arcade.key.ENTER:
+            _, w_tiles, h_tiles = self.map_sizes[self.map_size_index]
+            difficulty = self.difficulties[self.difficulty_index]
+            self.setup(
+                width_in_tiles=w_tiles,
+                height_in_tiles=h_tiles,
+                difficulty=difficulty,
+            )
+
+    def handle_game_input(self, symbol) -> None:
+        if not self.player:
+            return
+
+        current = self.player.location
+        new = list(current)
+        moved = False
+
+        if self.player.strength <= 0:
             print("Player has no strength left to move.")
+            return
 
+        if symbol in (arcade.key.LEFT, arcade.key.A):
+            new[0] -= 1
+            moved = True
+        elif symbol in (arcade.key.RIGHT, arcade.key.D):
+            new[0] += 1
+            moved = True
+        elif symbol in (arcade.key.UP, arcade.key.W):
+            new[1] += 1
+            moved = True
+        elif symbol in (arcade.key.DOWN, arcade.key.S):
+            new[1] -= 1
+            moved = True
 
-    def place_items(self, width_in_tiles, height_in_tiles, difficulty="normal", tiles_size=TILE_SIZE): 
-        """
-        Populates self.items with randomly placed items.
-        """
-        # Clear existing items if needed
+        if moved and tuple(new) == self.trader.location:
+            print("Movement denied: cannot move onto trader.")
+            return
+
+        if moved:
+            self.player.set_location(tuple(new))
+            self.player.is_at_trader_location(self.trader)
+            self.player.is_at_item_location(self.items)
+
+    def place_items(self, width_in_tiles, height_in_tiles, difficulty="normal"):
         self.items.clear()
 
-        # How many items? Scale by difficulty
         area = width_in_tiles * height_in_tiles
 
         if difficulty == "easy":
-            item_count = max(5, area // 50)
+            item_count = max(area // 6, 15)
         elif difficulty == "hard":
-            item_count = max(2, area // 120)
-        else:  # normal
-            item_count = max(area-5, 1)
+            item_count = max(area // 12, 10)
+        else:
+            item_count = max(area // 8, 12)
 
         for _ in range(item_count):
-            # Choose a random item class
             item_class = random.choice(ITEM_TYPES)
 
             while True:
@@ -122,23 +231,18 @@ class Game(arcade.Window):
                 y = random.randint(0, height_in_tiles - 1)
                 loc = (x, y)
 
-                # avoid placing same class objects together 
-                # avoid placing objects on traders or player
                 if (not any(existing.location == loc and isinstance(existing, item_class)
                             for existing in self.items)
                     and loc != self.player.location
-                    and loc != self.trader.location
-                ):
+                    and loc != self.trader.location):
                     break
 
-            item = item_class(tuple([x, y]))
+            item = item_class((x, y))
             self.items.append(item)
 
 
 def main() -> None:
-    """Entry point when running this module directly."""
     window = Game()
-    window.setup()
     arcade.run()
 
 
