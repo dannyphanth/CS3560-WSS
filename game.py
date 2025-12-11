@@ -131,7 +131,7 @@ class Game(arcade.Window):
     def on_update(self, delta_time):
         """Arcade function called every few seconds to update game state."""
         self.turn_timer += delta_time
-        if self.turn_timer >= self.turn_interval:
+        if self.player and self.turn_timer >= self.turn_interval:
             self.turn_timer = 0
             self.player.brain.make_move()
 
