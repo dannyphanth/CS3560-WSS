@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 class FoodBonus(Item):
     def __init__(self, location, amount=10):
         super().__init__(
-            name="Food Bonus",
+            name="Food",
             texture_path="assets/food.png",
             location=tuple(location),
             amount=amount
@@ -33,7 +33,7 @@ class FoodBonus(Item):
 class WaterBonus(Item):
     def __init__(self, location, amount=10):
         super().__init__(
-            name="Water Bonus",
+            name="Water",
             texture_path="assets/water.png",
             location=tuple(location),
             amount=amount
@@ -46,7 +46,7 @@ class WaterBonus(Item):
 class GoldBonus(Item):
     def __init__(self, location, amount=1):
         super().__init__(
-            name="Gold Bonus",
+            name="Gold",
             texture_path="assets/gold.png",
             location=tuple(location),
             amount=amount

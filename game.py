@@ -19,6 +19,9 @@ ITEM_TYPES = [WaterBonus, FoodBonus, GoldBonus, RepeatingFoodFountain]
 class Game(arcade.Window):
     """Main Arcade window for the Wilderness Survival game."""
 
+    #===============================================================
+    # setting up
+    #===============================================================
     def __init__(self) -> None:
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
 
@@ -27,6 +30,8 @@ class Game(arcade.Window):
 
         # Game objects
         self.world: Optional[World] = None
+        self.turn_timer = 0
+        self.turn_interval = 1
         self.player = None
         self.traders: list[Trader] = []
         self.items: list[Item] = []
@@ -43,6 +48,7 @@ class Game(arcade.Window):
         self.difficulty_index = 1  # normal
 
         arcade.set_background_color(arcade.color.BLACK)
+
 
     def setup(self, width_in_tiles: int | None = None,
               height_in_tiles: int | None = None,
@@ -64,8 +70,9 @@ class Game(arcade.Window):
         self.player = Player(
             "Player1",
             location=(0, 0),
-            inventory=Inventory(12, 12, 12, max_items=300),
-            strength=1000,
+            inventory=Inventory(12, 12, 12, max_items=30),
+            game=self,
+            strength=25,
         )
 
         # Place traders at random tiles not occupied by player
@@ -76,6 +83,7 @@ class Game(arcade.Window):
 
         # Switch screen
         self.state = "playing"
+
 
     def on_draw(self) -> None:
         self.clear()
@@ -90,7 +98,79 @@ class Game(arcade.Window):
                 for trader in self.traders:
                     trader.draw()
             if self.items:
+                # because the item instances share a sprite_list, 
+                # simply use one item to draw the entire list
                 self.items[0].sprite_list.draw()
+
+
+    def place_items(self, width_in_tiles, height_in_tiles, difficulty="normal", tiles_size=TILE_SIZE): 
+        """
+        Populates self.items with randomly placed items.
+        """
+        # Clear existing items if needed
+        self.items.clear()
+
+        # How many items? Scale by difficulty
+        area = width_in_tiles * height_in_tiles
+
+        if difficulty == "easy":
+            item_count = max(5, area // 50)
+        elif difficulty == "hard":
+            item_count = max(2, area // 120)
+        else:  # normal
+            # item_count = max(3, area // 80)
+            item_count = 300
+
+        for _ in range(item_count):
+            # Choose a random item class
+            item_class = random.choice(ITEM_TYPES)
+
+            while True:
+                x = random.randint(0, width_in_tiles - 1)
+                y = random.randint(0, height_in_tiles - 1)
+                loc = (x, y)
+
+                # avoid placing same class objects together 
+                # avoid placing objects on traders or player
+                if (
+                    not any(existing.location == loc and isinstance(existing, item_class)
+                            for existing in self.items)
+                    and loc != self.player.location
+                    and all(loc != trader.location for trader in self.traders)
+                ):
+                    break
+
+            item = item_class(tuple([x, y]))
+            self.items.append(item)
+
+
+
+    #===============================================================
+    # Turn logic
+    #===============================================================
+
+    def on_update(self, delta_time):
+        """Arcade function called every few seconds to update game state."""
+        self.turn_timer += delta_time
+        if self.player and self.turn_timer >= self.turn_interval:
+            self.turn_timer = 0
+            self.player.brain.make_move()
+
+
+    def apply_terrain_cost(self, player: Player): 
+        terrainObj = self.world.get_terrain(player.location)
+        player.strength - terrainObj.move_cost
+        player.inventory.spend('water', terrainObj.water_cost)
+        player.inventory.spend('food', terrainObj.food_cost)
+                
+
+    def list_items_at_location(self, loc) -> list[Item]:
+        itemsAtLoc = [] 
+        for item in self.items[:]:   # iterate over a copy
+            if loc == item.location:
+                itemsAtLoc.append(item)
+        return itemsAtLoc
+
 
     def draw_menu(self) -> None:
         arcade.draw_text(
@@ -148,11 +228,15 @@ class Game(arcade.Window):
             anchor_x="center",
         )
 
+
     def on_key_press(self, symbol, modifiers):
         if self.state == "menu":
             self.handle_menu_input(symbol)
         else:
-            self.handle_game_input(symbol)
+            # This is where we can handle game input
+            # self.handle_game_input(symbol)
+            pass
+
 
     def handle_menu_input(self, symbol) -> None:
         if symbol in (arcade.key.LEFT, arcade.key.A):
@@ -176,70 +260,6 @@ class Game(arcade.Window):
                 difficulty=difficulty,
             )
 
-    def handle_game_input(self, symbol) -> None:
-        if not self.player:
-            return
-
-        current = self.player.location
-        new = list(current)
-        moved = False
-
-        if self.player.strength <= 0:
-            print("Player has no strength left to move.")
-            return
-
-        if symbol in (arcade.key.LEFT, arcade.key.A):
-            new[0] -= 1
-            moved = True
-        elif symbol in (arcade.key.RIGHT, arcade.key.D):
-            new[0] += 1
-            moved = True
-        elif symbol in (arcade.key.UP, arcade.key.W):
-            new[1] += 1
-            moved = True
-        elif symbol in (arcade.key.DOWN, arcade.key.S):
-            new[1] -= 1
-            moved = True
-
-        if moved and self.traders:
-            if any(tuple(new) == t.location for t in self.traders):
-                print("Movement denied: cannot move onto trader.")
-                return
-
-        if moved:
-            self.player.set_location(tuple(new))
-            for trader in self.traders:
-                self.player.is_at_trader_location(trader)
-            self.player.is_at_item_location(self.items)
-
-    def place_items(self, width_in_tiles, height_in_tiles, difficulty="normal"):
-        self.items.clear()
-
-        area = width_in_tiles * height_in_tiles
-
-        if difficulty == "easy":
-            item_count = max(area // 6, 15)
-        elif difficulty == "hard":
-            item_count = max(area // 12, 10)
-        else:
-            item_count = max(area // 8, 12)
-
-        for _ in range(item_count):
-            item_class = random.choice(ITEM_TYPES)
-
-            while True:
-                x = random.randint(0, width_in_tiles - 1)
-                y = random.randint(0, height_in_tiles - 1)
-                loc = (x, y)
-
-                if (not any(existing.location == loc and isinstance(existing, item_class)
-                            for existing in self.items)
-                    and loc != self.player.location
-                    and all(trader.location != loc for trader in self.traders)):
-                    break
-
-            item = item_class((x, y))
-            self.items.append(item)
 
     def place_traders(self, width_in_tiles, height_in_tiles):
         """Spawn regular and greedy traders based on map size."""
@@ -287,7 +307,11 @@ class Game(arcade.Window):
         return traders
 
 
-def main() -> None:
+#===============================================================
+# Start this file
+#===============================================================
+def main():
+    """Main entry point for the game."""
     window = Game()
     arcade.run()
 

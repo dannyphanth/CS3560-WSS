@@ -71,13 +71,19 @@ class Trader(Actor):
         )
 
         return {
-            "item": item_requested,
-            "quantity": counter_quantity_requested,
-            "item_given": item_given,
-            "quantity_given": counter_quantity_given,
+            'item': item_requested,
+            'quantity': counter_quantity_requested,
+            'item_given': item_given,
+            'quantity_given': counter_quantity_given
         }
 
 
+
+
+
+#==============================================================
+# Greedy Trader
+#==============================================================
 class GreedyTrader(Trader):
     """
     A stricter, greedy trader:
