@@ -50,25 +50,6 @@ class Game(arcade.Window):
         arcade.set_background_color(arcade.color.BLACK)
 
 
-    def on_draw(self) -> None:
-        self.clear()
-        print("State: ", self.state)
-        if self.state == "menu":
-            self.draw_menu()
-        elif self.state == "playing":
-            if self.world:
-                self.world.draw()
-            if self.player:
-                self.player.draw()
-            if self.traders:
-                for trader in self.traders:
-                    trader.draw()
-            if self.items:
-                # because the item instances share a sprite_list, 
-                # simply use one item to draw the entire list
-                self.items[0].sprite_list.draw()
-
-
     def setup(self, width_in_tiles: int | None = None,
               height_in_tiles: int | None = None,
               difficulty: str = "normal") -> None:
@@ -104,6 +85,24 @@ class Game(arcade.Window):
         self.state = "playing"
 
 
+    def on_draw(self) -> None:
+        self.clear()
+        if self.state == "menu":
+            self.draw_menu()
+        elif self.state == "playing":
+            if self.world:
+                self.world.draw()
+            if self.player:
+                self.player.draw()
+            if self.traders:
+                for trader in self.traders:
+                    trader.draw()
+            if self.items:
+                # because the item instances share a sprite_list, 
+                # simply use one item to draw the entire list
+                self.items[0].sprite_list.draw()
+
+
     def place_items(self, width_in_tiles, height_in_tiles, difficulty="normal", tiles_size=TILE_SIZE): 
         """
         Populates self.items with randomly placed items.
@@ -133,10 +132,11 @@ class Game(arcade.Window):
 
                 # avoid placing same class objects together 
                 # avoid placing objects on traders or player
-                if (not any(existing.location == loc and isinstance(existing, item_class)
+                if (
+                    not any(existing.location == loc and isinstance(existing, item_class)
                             for existing in self.items)
                     and loc != self.player.location
-                    and loc != self.trader.location
+                    and all(loc != trader.location for trader in self.traders)
                 ):
                     break
 
