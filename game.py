@@ -49,6 +49,7 @@ class Game(arcade.Window):
 
         arcade.set_background_color(arcade.color.BLACK)
 
+
     def setup(self, width_in_tiles: int | None = None,
               height_in_tiles: int | None = None,
               difficulty: str = "normal") -> None:
@@ -145,12 +146,12 @@ class Game(arcade.Window):
 
     def list_items_at_location(self, loc) -> list[Item]:
         itemsAtLoc = [] 
-        
         for item in self.items[:]:   # iterate over a copy
             if loc == item.location:
                 itemsAtLoc.append(item)
-                
         return itemsAtLoc
+
+
     def on_draw(self) -> None:
         self.clear()
         if self.state == "menu":
@@ -167,6 +168,7 @@ class Game(arcade.Window):
                 # because the item instances share a sprite_list, 
                 # simply use one item to draw the entire list
                 self.items[0].sprite_list.draw()
+
 
     def draw_menu(self) -> None:
         arcade.draw_text(
