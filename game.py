@@ -50,6 +50,25 @@ class Game(arcade.Window):
         arcade.set_background_color(arcade.color.BLACK)
 
 
+    def on_draw(self) -> None:
+        self.clear()
+        print("State: ", self.state)
+        if self.state == "menu":
+            self.draw_menu()
+        elif self.state == "playing":
+            if self.world:
+                self.world.draw()
+            if self.player:
+                self.player.draw()
+            if self.traders:
+                for trader in self.traders:
+                    trader.draw()
+            if self.items:
+                # because the item instances share a sprite_list, 
+                # simply use one item to draw the entire list
+                self.items[0].sprite_list.draw()
+
+
     def setup(self, width_in_tiles: int | None = None,
               height_in_tiles: int | None = None,
               difficulty: str = "normal") -> None:
@@ -71,6 +90,7 @@ class Game(arcade.Window):
             "Player1",
             location=(0, 0),
             inventory=Inventory(12, 12, 12, max_items=30),
+            game=self,
             strength=25,
         )
 
@@ -152,24 +172,6 @@ class Game(arcade.Window):
         return itemsAtLoc
 
 
-    def on_draw(self) -> None:
-        self.clear()
-        if self.state == "menu":
-            self.draw_menu()
-        elif self.state == "playing":
-            if self.world:
-                self.world.draw()
-            if self.player:
-                self.player.draw()
-            if self.traders:
-                for trader in self.traders:
-                    trader.draw()
-            if self.items:
-                # because the item instances share a sprite_list, 
-                # simply use one item to draw the entire list
-                self.items[0].sprite_list.draw()
-
-
     def draw_menu(self) -> None:
         arcade.draw_text(
             "Wilderness Survival",
@@ -225,6 +227,15 @@ class Game(arcade.Window):
             font_size=18,
             anchor_x="center",
         )
+
+
+    def on_key_press(self, symbol, modifiers):
+        if self.state == "menu":
+            self.handle_menu_input(symbol)
+        else:
+            # This is where we can handle game input
+            # self.handle_game_input(symbol)
+            pass
 
 
     def handle_menu_input(self, symbol) -> None:

@@ -33,7 +33,7 @@ class Player(Actor):
         self.sprite.center_y = location[1] * TILE_SIZE + TILE_SIZE // 2
         self.strength -= 1  # reduce strength by 1 for each movement
         # interact with the environment
-        self.is_at_trader_location(self.game.trader)
+        self.is_at_trader_location(self.game.traders)
         self.check_for_loot()
         self.game.apply_terrain_cost(self)
         print(f"{self.name} to {self.location}")
@@ -114,49 +114,50 @@ class Player(Actor):
         return counter_offer['quantity'] <= 10
 
 
-    def is_at_trader_location(self, trader):
-        tile_above = (trader.location[0], trader.location[1] + 1)
-        tile_left = (trader.location[0] - 1, trader.location[1])
-        tile_right = (trader.location[0] + 1, trader.location[1])
-        tile_below = (trader.location[0], trader.location[1] - 1) 
+    def is_at_trader_location(self, traders: list[any]):
+        for trader in traders:
+            tile_above = (trader.location[0], trader.location[1] + 1)
+            tile_left = (trader.location[0] - 1, trader.location[1])
+            tile_right = (trader.location[0] + 1, trader.location[1])
+            tile_below = (trader.location[0], trader.location[1] - 1) 
 
-        if self.location == tile_above or self.location == tile_left or self.location == tile_right or self.location == tile_below:
-            print("Player is adjacent to Trader, initiating trade...")
+            if self.location == tile_above or self.location == tile_left or self.location == tile_right or self.location == tile_below:
+                print("Player is adjacent to Trader, initiating trade...")
 
-            # randomize the trade offer
-            if self.inventory:
-                # prevent trading the entire inventory (must leave at least 1)
-                item_offered = self.random_resource()
-                max_quantity_available = self.inventory.balance(item_offered)
-                
-                # max_offerable is at least 1 less than total, capped at 7 units
-                max_offerable = max(0, max_quantity_available - 1)
-                max_offerable = min(max_offerable, 7)  # hard cap at 7 units
+                # randomize the trade offer
+                if self.inventory:
+                    # prevent trading the entire inventory (must leave at least 1)
+                    item_offered = self.random_resource()
+                    max_quantity_available = self.inventory.balance(item_offered)
+                    
+                    # max_offerable is at least 1 less than total, capped at 7 units
+                    max_offerable = max(0, max_quantity_available - 1)
+                    max_offerable = min(max_offerable, 7)  # hard cap at 7 units
 
-                # quantity must be between 1 and max_offerable; if max_offerable < 1, quantity is 0
-                if max_offerable >= 1:
-                    quantity_offered = random.randint(1, max_offerable)
+                    # quantity must be between 1 and max_offerable; if max_offerable < 1, quantity is 0
+                    if max_offerable >= 1:
+                        quantity_offered = random.randint(1, max_offerable)
+                    else:
+                        quantity_offered = 0 # cannot offer if max_offerable is 0 (i.e., inventory is 1 or 0)
+
+                    player_items_presenting = {'item': item_offered, 'quantity': quantity_offered}
+
+                    # pick a *different* resource to request when possible
+                    all_resources = ["gold", "food", "water"]
+                    possible_requested = [r for r in all_resources if r != item_offered]
+                    if possible_requested:
+                        item_requested = random.choice(possible_requested)
+                    else:
+                        item_requested = item_offered
+
+                    quantity_requested = random.randint(1, 10) 
+                    
+                    player_items_requesting = {'item': item_requested, 'quantity': quantity_requested}
+                    
+                    # only propose trade if the player has something to offer (quantity > 0)
+                    if quantity_offered > 0:
+                        self.propose_trade(trader, player_items_presenting, player_items_requesting)
+                    else:
+                        print(f"Player has too little {item_offered} to offer in trade (must leave at least 1 in inventory).")
                 else:
-                    quantity_offered = 0 # cannot offer if max_offerable is 0 (i.e., inventory is 1 or 0)
-
-                player_items_presenting = {'item': item_offered, 'quantity': quantity_offered}
-
-                # pick a *different* resource to request when possible
-                all_resources = ["gold", "food", "water"]
-                possible_requested = [r for r in all_resources if r != item_offered]
-                if possible_requested:
-                    item_requested = random.choice(possible_requested)
-                else:
-                    item_requested = item_offered
-
-                quantity_requested = random.randint(1, 10) 
-                
-                player_items_requesting = {'item': item_requested, 'quantity': quantity_requested}
-                
-                # only propose trade if the player has something to offer (quantity > 0)
-                if quantity_offered > 0:
-                    self.propose_trade(trader, player_items_presenting, player_items_requesting)
-                else:
-                    print(f"Player has too little {item_offered} to offer in trade (must leave at least 1 in inventory).")
-            else:
-                print("Player has no inventory to trade.")
+                    print("Player has no inventory to trade.")
