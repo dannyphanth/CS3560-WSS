@@ -18,7 +18,7 @@ class Player(Actor):
         )
         self.strength: int = strength
         self.game = game
-        self.brain: Brain = CautiousBrain(game, self)
+        self.brain: Brain = CautiousBrain(game, self) # 
 
 
     def printStats(self): 
@@ -31,8 +31,21 @@ class Player(Actor):
         self.sprite.center_x = location[0] * TILE_SIZE + TILE_SIZE // 2
         self.sprite.center_y = location[1] * TILE_SIZE + TILE_SIZE // 2
         self.strength -= 1  # reduce strength by 1 for each movement
+        self.check_for_loot()
         # print(f"{self.name} to {self.location}. Remaining strength: {self.strength}")
-      
+
+    def check_for_loot(self):
+        self.game.items
+
+        for item in self.game.items[:]:   # iterate over a copy
+            if self.location == item.location:
+                pickedUpItem = True
+                print("Picked up: ", item.amount, item.name)
+                item.apply(self)
+                item.sprite.kill() # this kills the sprite in every arcade.sprite_list
+
+                self.game.items.remove(item)
+
 
     def propose_trade(self, trader, player_items_presenting, player_items_requesting):
         # player_items_presenting is a dictionary consisting of what the player is giving {'item': item, 'quantity': quantity}

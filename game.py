@@ -28,7 +28,7 @@ class Game(arcade.Window):
         # The game world (grid of Terrain). Created in setup().
         self.world: Optional[World] = None
         self.turn_timer = 0
-        self.turn_interval = 0.1
+        self.turn_interval = 1
         self.player = None
         self.trader = None
         self.items: list[Item] = []
@@ -46,7 +46,7 @@ class Game(arcade.Window):
         # Creates a new world instance!
         self.world = World(width_in_tiles, height_in_tiles, difficulty="normal", tile_size=TILE_SIZE)
         
-        self.player = Player("Player1", location=(0, 0), inventory=Inventory(12, 12, 12, max_items=300), game=self, strength=1000)  # With starting position
+        self.player = Player("Player1", location=(1, 1), inventory=Inventory(12, 12, 12, max_items=300), game=self, strength=1000)  # With starting position
         self.trader = Trader("Trader1", location=(1, 1), inventory=Inventory(100, 50, 50, max_items=3000))  # With starting position
         self.place_items(width_in_tiles, height_in_tiles, difficulty="normal", tiles_size=TILE_SIZE)
 
@@ -82,7 +82,8 @@ class Game(arcade.Window):
         elif difficulty == "hard":
             item_count = max(2, area // 120)
         else:  # normal
-            item_count = max(area-5, 1)
+            # item_count = max(3, area // 80)
+            item_count = 300
 
         for _ in range(item_count):
             # Choose a random item class
@@ -116,7 +117,7 @@ class Game(arcade.Window):
         self.turn_timer += delta_time
         if self.turn_timer >= self.turn_interval:
             self.turn_timer = 0
-            self.player.brain.make_move(self.player, self)
+            self.player.brain.make_move()
 
 
     def actor_moved_to_new_tile(self, player: Player): 
@@ -124,10 +125,18 @@ class Game(arcade.Window):
         player.strength - terrainObj.move_cost
         player.inventory.spend('water', terrainObj.water_cost)
         player.inventory.spend('food', terrainObj.food_cost)
-        player.printStats()
-        self.trader.printStats()
                 
 
+    def list_items_at_location(self, loc) -> list[Item]:
+        itemsAtLoc = [] 
+        
+        for item in self.items[:]:   # iterate over a copy
+            if loc == item.location:
+                itemsAtLoc.append(item)
+                
+        return itemsAtLoc
+
+        
     def actor_at_item_location(self, player: Player, itemList: list[Item]):
         pickedUpItem = False
 

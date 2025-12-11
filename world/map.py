@@ -77,6 +77,7 @@ class World:
     def get_terrain(self, loc: tuple) -> Terrain:
         """Return the Terrain at grid cell (x, y)."""
         if not self.in_bounds(loc):
+            return
             raise IndexError(f"Cell ({loc[0]}, {loc[1]}) is outside the world.")
         return self.grid[loc[1]][loc[0]] # for some reason the grid is switched…
 

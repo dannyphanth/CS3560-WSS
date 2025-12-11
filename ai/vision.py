@@ -4,6 +4,7 @@ Provides vision (scanning environment) and brain (decision making) capabilities.
 Works with Player class that uses 'location' attribute for position.
 """
 
+import heapq
 from typing import Tuple, List, Dict, Optional, Any
 from abc import ABC, abstractmethod
 
@@ -16,104 +17,66 @@ class Vision:
         self.player = player
         
     
-    def get_player_pos(self) -> Tuple[int, int]:
-        """Get player position, checking both 'location' and 'pos' attributes."""
-        if hasattr(self.player, 'location'):
-            return self.player.location
-        return getattr(self.player, 'pos', (0, 0))
+    # def get_player_pos(self) -> Tuple[int, int]:
+    #     """Get player position, checking both 'location' and 'pos' attributes."""
+    #     if hasattr(self.player, 'location'):
+    #         return self.player.location
+    #     return getattr(self.player, 'pos', (0, 0))
+
+
+    def scan_area(self, radius: int = 1) -> Dict[str, Any]:
+        x = self.player.location[0]
+        y = self.player.location[1]
         
-    
-    def scan_area(self, radius: int = 5) -> Dict[str, Any]:
-        """
-        Scan tiles within radius for important features.
         
-        Returns dict with:
-        - resources: list of (pos, type, distance) for food/water
-        - hazards: list of (pos, type, distance) for dangerous terrain
-        - traders: list of (pos, trader, distance)
-        - safe_tiles: list of (pos, cost, distance) for movement
-        """
-        x, y = self.get_player_pos()
-        
-        resources = []
-        hazards = []
+        water = []
+        food = []
+        foodFountain = []
+        moveCosts = []
         traders = []
-        safe_tiles = []
         
         for dx in range(-radius, radius + 1):
             for dy in range(-radius, radius + 1):
                 nx, ny = x + dx, y + dy
                 
                 # Check bounds
-                if not (0 <= nx < self.world.width and 0 <= ny < self.world.height):
+                if not (0 <= nx < self.game.world.width and 0 <= ny < self.game.world.height):
                     continue
                 
                 distance = abs(dx) + abs(dy)  # Manhattan distance
                 pos = (nx, ny)
                 
                 # Check for items (food/water)
-                if hasattr(self.world, 'items') and pos in self.world.items:
-                    item = self.world.items[pos]
-                    resources.append((pos, item.get('type', 'unknown'), distance))
+                items = self.game.list_items_at_location(pos)
+                for item in items: 
+                    if item.name == 'Food':
+                        food.append((pos, item, distance))
+                    if item.name == 'Water':
+                        water.append((pos, item, distance))
+                    if item.name == 'Food Fountain':
+                        foodFountain.append((pos, item, distance))
+
+                # Check for move cost 
+                move_cost = self.game.world.get_terrain(pos).move_cost
+                moveCosts.append((pos, move_cost, distance))
                 
-                # Check for traders
-                if hasattr(self.world, 'traders'):
-                    for trader in self.world.traders:
-                        trader_pos = trader.location if hasattr(trader, 'location') else trader.pos
-                        is_alive = getattr(trader, 'alive', True)
-                        if trader_pos == pos and is_alive:
-                            traders.append((pos, trader, distance))
+                # TODO: ADD TRADER LOCATIONS
+                # # Check for traders
+                # if hasattr(self.game.world, 'traders'):
+                #     for trader in self.game.world.traders:
+                #         trader_pos = trader.location if hasattr(trader, 'location') else trader.pos
+                #         is_alive = getattr(trader, 'alive', True)
+                #         if trader_pos == pos and is_alive:
+                #             traders.append((pos, trader, distance))
                 
-                # Analyze terrain
-                if hasattr(self.world, 'get_movement_cost'):
-                    move_cost = self.world.get_movement_cost(nx, ny)
-                    
-                    # Hazards (high cost terrain)
-                    if move_cost > 3:
-                        terrain = self.world.get_tile(nx, ny) if hasattr(self.world, 'get_tile') else 'unknown'
-                        hazards.append((pos, terrain, distance))
-                    elif move_cost < float('inf'):
-                        safe_tiles.append((pos, move_cost, distance))
         
         return {
-            'resources': sorted(resources, key=lambda x: x[2]),
-            'hazards': sorted(hazards, key=lambda x: x[2]),
+            # sort by distance -> that's why we use the x: x[2], because distance is the second index
+            'water': sorted(water, key=lambda x: x[2]),
+            'food': sorted(food, key=lambda x: x[2]),
+            'foodFountain': sorted(foodFountain, key=lambda x: x[2]),
+            'moveCosts': sorted(moveCosts, key=lambda x: x[2]),
             'traders': sorted(traders, key=lambda x: x[2]),
-            'safe_tiles': sorted(safe_tiles, key=lambda x: x[2])
-        }
-    
-    def find_nearest(self, target_type: str, scan_data: Dict = None) -> Optional[Tuple[int, int]]:
-        """Find nearest target of given type (food, water, trader)."""
-        if scan_data is None:
-            scan_data = self.scan_area()
-        
-        if target_type in ['food', 'water']:
-            for pos, item_type, dist in scan_data['resources']:
-                if item_type == target_type:
-                    return pos
-        elif target_type == 'trader':
-            if scan_data['traders']:
-                return scan_data['traders'][0][0]
-        
-        return None
-    
-    def assess_danger(self, pos: Tuple[int, int]) -> float:
-        """
-        Assess danger level at position (0.0 = safe, 1.0 = deadly).
-        Based on terrain cost and distance to hazards.
-        """
-        x, y = pos
-        if hasattr(self.world, 'get_movement_cost'):
-            terrain_cost = self.world.get_movement_cost(x, y)
-            
-            # Impassable is deadly
-            if terrain_cost == float('inf'):
-                return 1.0
-            
-            # High cost terrain is moderately dangerous
-            danger = min(terrain_cost / 10.0, 0.8)
-            return danger
-        
-        return 0.0
+        }    
 
-
+        

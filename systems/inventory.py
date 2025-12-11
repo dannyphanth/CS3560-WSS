@@ -5,7 +5,7 @@ class Inventory:
     gold: int = 100
     food: int = 50
     water: int = 50
-    max_items: int = 300
+    max_items: int = 30
 
     @property
     def total_items(self) -> int:
