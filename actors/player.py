@@ -117,8 +117,9 @@ class Player(Actor):
                 item_offered = self.random_resource()
                 max_quantity_available = self.inventory.balance(item_offered)
                 
-                # max_offerable is at least 1 less than total; if available is 1 or 0, max_offerable is 0 or less
-                max_offerable = max(0, max_quantity_available - 1) 
+                # max_offerable is at least 1 less than total, capped at 7 units
+                max_offerable = max(0, max_quantity_available - 1)
+                max_offerable = min(max_offerable, 7)  # hard cap at 7 units
 
                 # quantity must be between 1 and max_offerable; if max_offerable < 1, quantity is 0
                 if max_offerable >= 1:
@@ -128,8 +129,14 @@ class Player(Actor):
 
                 player_items_presenting = {'item': item_offered, 'quantity': quantity_offered}
 
-                # randomly pick item to request (quantity is arbitrary, up to 10 for simplicity)
-                item_requested = self.random_resource()
+                # pick a *different* resource to request when possible
+                all_resources = ["gold", "food", "water"]
+                possible_requested = [r for r in all_resources if r != item_offered]
+                if possible_requested:
+                    item_requested = random.choice(possible_requested)
+                else:
+                    item_requested = item_offered
+
                 quantity_requested = random.randint(1, 10) 
                 
                 player_items_requesting = {'item': item_requested, 'quantity': quantity_requested}
