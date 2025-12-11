@@ -7,7 +7,7 @@ from items.base import Item
 from items.bonuses import FoodBonus, WaterBonus, GoldBonus, RepeatingFoodFountain
 from world.map import World, TILE_SIZE
 from actors.player import Player
-from actors.trader import Trader
+from actors.trader import Trader, GreedyTrader
 from systems.inventory import Inventory
 
 SCREEN_WIDTH = 800
@@ -28,7 +28,7 @@ class Game(arcade.Window):
         # Game objects
         self.world: Optional[World] = None
         self.player = None
-        self.trader = None
+        self.traders: list[Trader] = []
         self.items: list[Item] = []
 
         # Menu options
@@ -60,18 +60,16 @@ class Game(arcade.Window):
             tile_size=TILE_SIZE,
         )
 
-        # Player and Trader
+        # Player and Traders
         self.player = Player(
             "Player1",
             location=(0, 0),
             inventory=Inventory(12, 12, 12, max_items=300),
             strength=1000,
         )
-        self.trader = Trader(
-            "Trader1",
-            location=(1, 1),
-            inventory=Inventory(100, 50, 50, max_items=3000),
-        )
+
+        # Place traders at random tiles not occupied by player
+        self.traders = self.place_traders(width_in_tiles, height_in_tiles)
 
         # Items
         self.place_items(width_in_tiles, height_in_tiles, difficulty=difficulty)
@@ -88,8 +86,9 @@ class Game(arcade.Window):
                 self.world.draw()
             if self.player:
                 self.player.draw()
-            if self.trader:
-                self.trader.draw()
+            if self.traders:
+                for trader in self.traders:
+                    trader.draw()
             if self.items:
                 self.items[0].sprite_list.draw()
 
@@ -202,13 +201,15 @@ class Game(arcade.Window):
             new[1] -= 1
             moved = True
 
-        if moved and tuple(new) == self.trader.location:
-            print("Movement denied: cannot move onto trader.")
-            return
+        if moved and self.traders:
+            if any(tuple(new) == t.location for t in self.traders):
+                print("Movement denied: cannot move onto trader.")
+                return
 
         if moved:
             self.player.set_location(tuple(new))
-            self.player.is_at_trader_location(self.trader)
+            for trader in self.traders:
+                self.player.is_at_trader_location(trader)
             self.player.is_at_item_location(self.items)
 
     def place_items(self, width_in_tiles, height_in_tiles, difficulty="normal"):
@@ -234,11 +235,56 @@ class Game(arcade.Window):
                 if (not any(existing.location == loc and isinstance(existing, item_class)
                             for existing in self.items)
                     and loc != self.player.location
-                    and loc != self.trader.location):
+                    and all(trader.location != loc for trader in self.traders)):
                     break
 
             item = item_class((x, y))
             self.items.append(item)
+
+    def place_traders(self, width_in_tiles, height_in_tiles):
+        """Spawn regular and greedy traders based on map size."""
+        area = width_in_tiles * height_in_tiles
+        if area < 150:
+            regular_count, greedy_count = 1, 0
+        elif area < 300:
+            regular_count, greedy_count = 1, 1
+        else:
+            regular_count, greedy_count = 2, 2
+
+        traders: list[Trader] = []
+        occupied = {self.player.location}
+
+        def random_empty_loc():
+            while True:
+                loc = (
+                    random.randint(0, width_in_tiles - 1),
+                    random.randint(0, height_in_tiles - 1),
+                )
+                if loc not in occupied:
+                    occupied.add(loc)
+                    return loc
+
+        for i in range(regular_count):
+            loc = random_empty_loc()
+            traders.append(
+                Trader(
+                    f"Trader{i+1}",
+                    location=loc,
+                    inventory=Inventory(100, 50, 50, max_items=3000),
+                )
+            )
+
+        for i in range(greedy_count):
+            loc = random_empty_loc()
+            traders.append(
+                GreedyTrader(
+                    f"GreedyTrader{i+1}",
+                    location=loc,
+                    inventory=Inventory(100, 50, 50, max_items=3000),
+                )
+            )
+
+        return traders
 
 
 def main() -> None:
