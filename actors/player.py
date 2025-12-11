@@ -36,8 +36,8 @@ class Player(Actor):
         self.is_at_trader_location(self.game.traders)
         self.check_for_loot()
         self.game.apply_terrain_cost(self)
-        print(f"{self.name} to {self.location}")
-        # self.print_stats()
+        # print(f"{self.name} to {self.location}")
+        self.print_stats()
 
 
     def check_for_loot(self):
@@ -121,7 +121,7 @@ class Player(Actor):
             tile_right = (trader.location[0] + 1, trader.location[1])
             tile_below = (trader.location[0], trader.location[1] - 1) 
 
-            if self.location == tile_above or self.location == tile_left or self.location == tile_right or self.location == tile_below:
+            if self.location == trader.location:
                 print("Player is adjacent to Trader, initiating trade...")
 
                 # randomize the trade offer

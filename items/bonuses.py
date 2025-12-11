@@ -27,7 +27,7 @@ class FoodBonus(Item):
         )
 
     def apply(self, player: "Player") -> None:
-        player.food = min(player.inventory.max_items, player.inventory.food + self.amount)
+        player.inventory.food = min(player.inventory.max_items, player.inventory.food + self.amount)
 
 @dataclass(eq=False)
 class WaterBonus(Item):

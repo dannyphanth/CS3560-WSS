@@ -31,7 +31,7 @@ class Game(arcade.Window):
         # Game objects
         self.world: Optional[World] = None
         self.turn_timer = 0
-        self.turn_interval = 1
+        self.turn_interval = 1 # update the speed of each round
         self.player = None
         self.traders: list[Trader] = []
         self.items: list[Item] = []
