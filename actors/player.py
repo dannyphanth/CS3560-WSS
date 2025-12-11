@@ -27,15 +27,17 @@ class Player(Actor):
         
 
     def set_location(self, location):
+        # update location
         self.location = location
         self.sprite.center_x = location[0] * TILE_SIZE + TILE_SIZE // 2
         self.sprite.center_y = location[1] * TILE_SIZE + TILE_SIZE // 2
         self.strength -= 1  # reduce strength by 1 for each movement
+        # interact with the environment
         self.is_at_trader_location(self.game.trader)
         self.check_for_loot()
         self.game.apply_terrain_cost(self)
         print(f"{self.name} to {self.location}")
-        self.print_stats()
+        # self.print_stats()
 
 
     def check_for_loot(self):
