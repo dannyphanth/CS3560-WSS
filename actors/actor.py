@@ -21,7 +21,7 @@ class Actor:
         self.sprite.center_y = location[1] * TILE_SIZE + TILE_SIZE // 2
 
 
-    def printStats(self): 
+    def print_stats(self): 
         print(f"Gold\tFood\tWater\tMax Items")
         print(f"{self.inventory.gold}\t{self.inventory.food}\t{self.inventory.water}\t{self.inventory.max_items}")
         

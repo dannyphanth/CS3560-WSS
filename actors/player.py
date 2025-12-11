@@ -21,7 +21,7 @@ class Player(Actor):
         self.brain: Brain = CautiousBrain(game, self) # 
 
 
-    def printStats(self): 
+    def print_stats(self): 
         print(f"Gold\tFood\tWater\tStrgth\tMax Items")
         print(f"{self.inventory.gold}\t{self.inventory.food}\t{self.inventory.water}\t{self.strength}\t{self.inventory.max_items}")
         
@@ -31,19 +31,21 @@ class Player(Actor):
         self.sprite.center_x = location[0] * TILE_SIZE + TILE_SIZE // 2
         self.sprite.center_y = location[1] * TILE_SIZE + TILE_SIZE // 2
         self.strength -= 1  # reduce strength by 1 for each movement
+        self.is_at_trader_location(self.game.trader)
         self.check_for_loot()
-        # print(f"{self.name} to {self.location}. Remaining strength: {self.strength}")
+        self.game.apply_terrain_cost(self)
+        print(f"{self.name} to {self.location}")
+        self.print_stats()
+
 
     def check_for_loot(self):
         self.game.items
-
         for item in self.game.items[:]:   # iterate over a copy
             if self.location == item.location:
                 pickedUpItem = True
-                print("Picked up: ", item.amount, item.name)
+                # print("Picked up: ", item.amount, item.name)
                 item.apply(self)
                 item.sprite.kill() # this kills the sprite in every arcade.sprite_list
-
                 self.game.items.remove(item)
 
 

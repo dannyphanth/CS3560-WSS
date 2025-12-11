@@ -46,8 +46,8 @@ class Game(arcade.Window):
         # Creates a new world instance!
         self.world = World(width_in_tiles, height_in_tiles, difficulty="normal", tile_size=TILE_SIZE)
         
-        self.player = Player("Player1", location=(1, 1), inventory=Inventory(12, 12, 12, max_items=300), game=self, strength=1000)  # With starting position
-        self.trader = Trader("Trader1", location=(1, 1), inventory=Inventory(100, 50, 50, max_items=3000))  # With starting position
+        self.player = Player("Player1", location=(0, 0), inventory=Inventory(12, 12, 12, max_items=30), game=self, strength=25)  # With starting position
+        self.trader = Trader("Trader1", location=(6, 4), inventory=Inventory(100, 50, 50, max_items=3000))  # With starting position
         self.place_items(width_in_tiles, height_in_tiles, difficulty="normal", tiles_size=TILE_SIZE)
 
 
@@ -120,7 +120,7 @@ class Game(arcade.Window):
             self.player.brain.make_move()
 
 
-    def actor_moved_to_new_tile(self, player: Player): 
+    def apply_terrain_cost(self, player: Player): 
         terrainObj = self.world.get_terrain(player.location)
         player.strength - terrainObj.move_cost
         player.inventory.spend('water', terrainObj.water_cost)
@@ -137,23 +137,6 @@ class Game(arcade.Window):
         return itemsAtLoc
 
         
-    def actor_at_item_location(self, player: Player, itemList: list[Item]):
-        pickedUpItem = False
-
-        for item in itemList[:]:   # iterate over a copy
-            if player.location == item.location:
-                pickedUpItem = True
-                # print("Picked up: ", item.amount, item.name)
-                item.apply(player)
-                item.sprite.kill() # this kills the sprite in every arcade.sprite_list
-                itemList.remove(item)
-
-        # if pickedUpItem:
-            # print(f"Updated {player.name}")
-            # print(f"Inventory: ", end='')
-            # player.inventory.show_inventory()
-
-
     def on_key_press(self, symbol, modifiers):
         if self.player:
             current_location = self.player.location
@@ -184,7 +167,7 @@ class Game(arcade.Window):
             if moved:
                 self.player.set_location(tuple(new_location)) 
                 self.player.is_at_trader_location(self.trader)
-                self.actor_at_item_location(self.player, self.items)
+                self.player.check_for_loot()
         else:
             print("Player has no strength left to move.")
 

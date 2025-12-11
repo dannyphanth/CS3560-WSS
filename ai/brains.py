@@ -17,7 +17,7 @@ class Brain(ABC):
 
     
     @abstractmethod
-    def decide_action(self) -> Dict[str, Any]:
+    def decide_path(self) -> Dict[str, Any]:
         """
         Decide next action based on current state.
         
@@ -30,25 +30,29 @@ class Brain(ABC):
     
     
     def make_move(self): 
-        if not self.path: 
+        if self.path == []: 
             # no more moves to make a decision on a previous turn
             # so find a new path
-            self.path = self.decide_action()
+            self.path = self.decide_path()
 
-        move = self.path[0]
-        self.path.remove(move)
-        self.player.set_location(move)
-        return 
-        
-                
-
+        if self.path != []: 
+            move = self.path[0]
+            self.path.remove(move)
+            self.player.set_location(move)
+            return 
+        else: 
+            # if the path list is STILL empty, 
+            # the player will a skip a turn and gain a strength point
+            self.player.strength += 1
+            
     
+
     def _assess_needs(self) -> Dict[str, float]:
         """Assess urgency of needs (0.0 = satisfied, 1.0 = critical)."""
         
         # Access Player attributes
         return {
-            'strength': self.player.strength / 100,
+            'strength': self.player.strength / self.player.inventory.max_items,
             'food': self.player.inventory.food / self.player.inventory.max_items,
             'water': self.player.inventory.water / self.player.inventory.max_items,
         }
@@ -193,40 +197,45 @@ class Brain(ABC):
 class CautiousBrain(Brain):
     """Conservative play style: prioritizes safety and resource management."""
     
-    def decide_action(self) -> Dict[str, Any]:
+    def decide_path(self) -> Dict[str, Any]:
         """
-        Returns a path of squares to move to based on the decided action.
+        Returns a path of squares to move to based on what is needed most.
         """
-
         needs = self._assess_needs()
         scan = self.vision.scan_area(radius=20)
         playerPos = self.player.location
         
         # Critical strength - rest is priority
         if needs['strength'] < 0.3:
+            print("Need to rest")
             return []
         
         # Urgent water need (more critical than food)
         if needs['water'] < 0.4:
+            print("Looking for water")
             pathTo = self.find_path_to('water', playerPos, scan)
             if pathTo: return pathTo
             
         # Urgent food need
         if needs['food'] < 0.4:
+            print("Looking for food")
             pathTo = self.find_path_to('food', playerPos, scan)
             if pathTo: return pathTo
         
         # Moderate needs - seek resources proactively
         if needs['water'] < 0.7:
+            print("Looking for water, casually")
             pathTo = self.find_path_to('water', playerPos, scan)
             if pathTo: return pathTo
         
         if needs['food'] < 0.7:
+            print("Looking for food, casually")
             pathTo = self.find_path_to('food', playerPos, scan)
             if pathTo: return pathTo
         
         # Rest if low on resources
         if needs['strength'] < 0.7:
+            print("Just hanging out")
             return []
         
         # if all else fails, keep moving forward ✊
@@ -234,10 +243,11 @@ class CautiousBrain(Brain):
 
 
 
+
 class AggressiveBrain(Brain):
     """Aggressive play style: takes risks, seeks traders and valuable resources."""
     
-    def decide_action(self) -> Dict[str, Any]:
+    def decide_path(self) -> Dict[str, Any]:
         needs = self._assess_needs()
         scan = self.vision.scan_area(radius=7)  # Larger vision
         player_pos = self.player.location
@@ -289,7 +299,7 @@ class AggressiveBrain(Brain):
 class BalancedBrain(Brain):
     """Balanced play style: weighs all factors reasonably."""
     
-    def decide_action(self) -> Dict[str, Any]:
+    def decide_path(self) -> Dict[str, Any]:
         needs = self._assess_needs()
         scan = self.vision.scan_area(radius=6)
         player_pos = self.player.location
@@ -359,7 +369,7 @@ class BalancedBrain(Brain):
 class OpportunistBrain(Brain):
     """Opportunistic play style: seeks traders and high-value resources."""
     
-    def decide_action(self) -> Dict[str, Any]:
+    def decide_path(self) -> Dict[str, Any]:
         needs = self._assess_needs()
         scan = self.vision.scan_area(radius=8)
         player_pos = self.player.location
