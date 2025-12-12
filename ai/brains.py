@@ -3,6 +3,15 @@ from abc import ABC, abstractmethod
 from ai.vision import *
 import random
 
+
+BRAIN_TYPES = [
+    "Cautious",
+    "Aggressive",
+    "Balanced",
+    "Opportunistic",
+]
+
+
 class Brain(ABC):
     """
     Abstract base class for AI decision-making.
@@ -74,6 +83,8 @@ class Brain(ABC):
         """
 
         candidates = scan.get(target_resource, [])
+        if target_resource == "traders":
+            print("These are the candidates: ", candidates)
 
         if not candidates:
             return []
@@ -89,8 +100,6 @@ class Brain(ABC):
                 best_path = path
 
         return best_path
-
-
 
     
     def assess_danger(self, pos: Tuple[int, int]) -> float:
@@ -111,8 +120,6 @@ class Brain(ABC):
             return danger
         
         return 0.0
-
-
 
 
     def _heuristic(self, a, b) -> float:
@@ -169,7 +176,6 @@ class Brain(ABC):
                     came_from[nxt] = current
 
 
-
         if goal not in came_from:
             # No path
             return [], float("inf")
@@ -189,6 +195,8 @@ class Brain(ABC):
             path = path[1:]
 
         return path, cost_so_far[goal]
+
+
 
 
 
@@ -242,126 +250,91 @@ class CautiousBrain(Brain):
 
 
 
+
 class AggressiveBrain(Brain):
     """Aggressive play style: takes risks, seeks traders and valuable resources."""
     
     def decide_path(self) -> Dict[str, Any]:
         needs = self._assess_needs()
-        scan = self.vision.scan_area(radius=7)  # Larger vision
-        player_pos = self.player.location
+        scan = self.vision.scan_area(radius=2)
+        playerPos = self.player.location
         
         # Only rest if critically low
-        if needs['strength'] > 0.85:
-            return {'action': 'rest', 'params': {}}
+        if needs['strength'] < 0.10:
+            # print("Need to rest")
+            return []
         
         # Seek traders for potential advantage
-        if scan['traders'] and max(needs.values()) < 0.7:
-            trader_pos = scan['traders'][0][0]
-            if trader_pos == player_pos:
-                return {'action': 'trade', 'params': {'trader': scan['traders'][0][1]}}
-            next_pos = self._find_path_to(trader_pos)
-            if next_pos:
-                return {'action': 'move', 'params': {'pos': next_pos}}
+        if scan['traders']:
+            print("Looking for trader")
+            pathTo = self.find_path_to('traders', playerPos, scan)
+            print("The path: ", pathTo)
+            if pathTo: return pathTo
         
         # Get resources when needed
-        if needs['water'] > 0.5:
-            return self.find_path_to('water', scan)
-            if water_pos:
-                next_pos = self._find_path_to(water_pos)
-                if next_pos:
-                    return {'action': 'move', 'params': {'pos': next_pos}}
+        if needs['water'] < 0.5:
+            # print("Looking for water")
+            pathTo = self.find_path_to('water', playerPos, scan)
+            print("The path: ", pathTo)
+            if pathTo: return pathTo
         
-        if needs['food'] > 0.5:
-            return self.find_path_to('food', scan)
-            if food_pos:
-                next_pos = self._find_path_to(food_pos)
-                if next_pos:
-                    return {'action': 'move', 'params': {'pos': next_pos}}
-        
-        # Aggressively explore even risky terrain
-        if scan['resources']:
-            target = scan['resources'][0][0]
-            next_pos = self._find_path_to(target)
-            if next_pos:
-                return {'action': 'move', 'params': {'pos': next_pos}}
-        
-        # Keep moving
-        if scan['safe_tiles']:
-            # Pick tiles further away
-            target = scan['safe_tiles'][len(scan['safe_tiles'])//2][0]
-            next_pos = self._find_path_to(target)
-            if next_pos:
-                return {'action': 'move', 'params': {'pos': next_pos}}
-        
+        if needs['food'] < 0.5:
+            # print("Looking for food")
+            pathTo = self.find_path_to('food', playerPos, scan)
+            print("The path: ", pathTo)
+            if pathTo: return pathTo
+
+        # if all else fails, keep moving forward ✊
+        return [(playerPos[0] + 2, playerPos[1])]
+
+
+
+
+
+
 
 class BalancedBrain(Brain):
     """Balanced play style: weighs all factors reasonably."""
-    
+
+
     def decide_path(self) -> Dict[str, Any]:
         needs = self._assess_needs()
-        scan = self.vision.scan_area(radius=6)
-        player_pos = self.player.location
+        scan = self.vision.scan_area(radius=2)
+        playerPos = self.player.location
         
-        # Rest when strength is concerning
-        if needs['strength'] > 0.6:
-            return {'action': 'rest', 'params': {}}
+        # Only rest if critically low
+        if needs['strength'] < 0.4:
+            # print("Need to rest")
+            return []
         
-        # Handle critical needs first
+        # Handle criitical needs first 
         max_need = max(needs.values())
-        if max_need > 0.65:
+        if max_need < 0.80:
             if needs['water'] == max_need:
-                return self.find_path_to('water', scan)
-                if water_pos:
-                    next_pos = self._find_path_to(water_pos)
-                    if next_pos:
-                        return {'action': 'move', 'params': {'pos': next_pos}}
+                # print("Looking for water")
+                pathTo = self.find_path_to('water', playerPos, scan)
+                print("The path: ", pathTo)
+                if pathTo: return pathTo
             elif needs['food'] == max_need:
-                return self.find_path_to('food', scan)
-                if food_pos:
-                    next_pos = self._find_path_to(food_pos)
-                    if next_pos:
-                        return {'action': 'move', 'params': {'pos': next_pos}}
-        
+                # print("Looking for food")
+                pathTo = self.find_path_to('food', playerPos, scan)
+                print("The path: ", pathTo)
+                if pathTo: return pathTo
+
         # Consider trading when in moderate condition
-        if scan['traders'] and max_need < 0.5:
-            trader_pos = scan['traders'][0][0]
-            if trader_pos == player_pos:
-                return {'action': 'trade', 'params': {'trader': scan['traders'][0][1]}}
-            # Only go to trader if close
-            if scan['traders'][0][2] <= 3:
-                next_pos = self._find_path_to(trader_pos)
-                if next_pos:
-                    return {'action': 'move', 'params': {'pos': next_pos}}
-        
-        # Proactively seek resources
-        if needs['water'] > 0.35:
-            return self.find_path_to('water', scan)
-            if water_pos:
-                next_pos = self._find_path_to(water_pos)
-                if next_pos:
-                    return {'action': 'move', 'params': {'pos': next_pos}}
-        
-        if needs['food'] > 0.35:
-            return self.find_path_to('food', scan)
-            if food_pos:
-                next_pos = self._find_path_to(food_pos)
-                if next_pos:
-                    return {'action': 'move', 'params': {'pos': next_pos}}
-        
-        # Explore nearest safe areas
-        if scan['resources']:
-            target = scan['resources'][0][0]
-            next_pos = self._find_path_to(target)
-            if next_pos:
-                return {'action': 'move', 'params': {'pos': next_pos}}
-        
-        if scan['safe_tiles']:
-            target = scan['safe_tiles'][0][0]
-            next_pos = self._find_path_to(target)
-            if next_pos:
-                return {'action': 'move', 'params': {'pos': next_pos}}
-        
-        return {'action': 'rest', 'params': {}}
+        if scan['traders'] and max_need > 0.5:
+            print("Looking for trader")
+            pathTo = self.find_path_to('traders', playerPos, scan)
+            print("The path: ", pathTo)
+            if pathTo: return pathTo
+
+        # if all else fails, keep moving forward ✊
+        return [(playerPos[0] + 1, playerPos[1])]
+
+
+
+
+
 
 
 class OpportunistBrain(Brain):
@@ -369,47 +342,38 @@ class OpportunistBrain(Brain):
     
     def decide_path(self) -> Dict[str, Any]:
         needs = self._assess_needs()
-        scan = self.vision.scan_area(radius=8)
-        player_pos = self.player.location
+        scan = self.vision.scan_area(radius=2)
+        playerPos = self.player.location
         
         # Only handle truly critical situations
-        if needs['strength'] > 0.8:
-            return {'action': 'rest', 'params': {}}
-        
-        if needs['water'] > 0.75:
-            return self.find_path_to('water', scan)
-            if water_pos:
-                next_pos = self._find_path_to(water_pos)
-                if next_pos:
-                    return {'action': 'move', 'params': {'pos': next_pos}}
-        
-        if needs['food'] > 0.75:
-            return self.find_path_to('food', scan)
-            if food_pos:
-                next_pos = self._find_path_to(food_pos)
-                if next_pos:
-                    return {'action': 'move', 'params': {'pos': next_pos}}
-        
+        if needs['strength'] < 0.1:
+            return []
+
         # Prioritize traders
         if scan['traders']:
-            trader_pos = scan['traders'][0][0]
-            if trader_pos == player_pos:
-                return {'action': 'trade', 'params': {'trader': scan['traders'][0][1]}}
-            next_pos = self._find_path_to(trader_pos)
-            if next_pos:
-                return {'action': 'move', 'params': {'pos': next_pos}}
+            print("Looking for trader")
+            pathTo = self.find_path_to('traders', playerPos, scan)
+            print("The path: ", pathTo)
+            if pathTo: return pathTo
+
+        if needs['water'] < 0.85:
+            print("Looking for water")
+            pathTo = self.find_path_to('water', playerPos, scan)
+            print("The path: ", pathTo)
+            if pathTo: return pathTo
         
-        # Seek any resources opportunistically
-        if scan['resources']:
-            target = scan['resources'][0][0]
-            next_pos = self._find_path_to(target)
-            if next_pos:
-                return {'action': 'move', 'params': {'pos': next_pos}}
+        if needs['food'] < 0.90:
+            # print("Looking for food")
+            pathTo = self.find_path_to('food', playerPos, scan)
+            print("The path: ", pathTo)
+            if pathTo: return pathTo
+
+        # if all else fails, go to nearest water
+        if needs['water']:
+            print("Looking for water")
+            pathTo = self.find_path_to('water', playerPos, scan)
+            print("The path: ", pathTo)
+            if pathTo: return pathTo
         
-        # Explore aggressively
-        if scan['safe_tiles']:
-            # Prefer distant tiles
-            target = scan['safe_tiles'][-1][0]
-            next_pos = self._find_path_to(target)
-            if next_pos:
-                return {'action': 'move', 'params': {'pos': next_pos}}
+        # if all else fails, keep moving forward ✊
+        return [(playerPos[0] + 1, playerPos[1])]

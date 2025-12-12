@@ -57,16 +57,14 @@ class Vision:
             move_cost = self.game.world.get_terrain(pos).move_cost
             moveCosts.append((pos, move_cost, distance))
             
-            # TODO: ADD TRADER LOCATIONS
-            # # Check for traders
-            # if hasattr(self.game.world, 'traders'):
-            #     for trader in self.game.world.traders:
-            #         trader_pos = trader.location if hasattr(trader, 'location') else trader.pos
-            #         is_alive = getattr(trader, 'alive', True)
-            #         if trader_pos == pos and is_alive:
-            #             traders.append((pos, trader, distance))
+            # traders
+            for trader in self.game.traders: 
+                if trader.location == pos: 
+                    traders.append((pos, trader, distance))
+
         return {
-            # sort by distance -> that's why we use the x: x[2], because distance is the second index
+            # sort by distance: 
+            # that's why we use the x: x[2], because distance is the second index
             'water': sorted(water, key=lambda x: x[2]),
             'food': sorted(food, key=lambda x: x[2]),
             'moveCosts': sorted(moveCosts, key=lambda x: x[2]),

@@ -18,7 +18,7 @@ class Player(Actor):
         )
         self.strength: int = strength
         self.game = game
-        self.brain: Brain = CautiousBrain(game, self) # 
+        self.brain: Brain = OpportunistBrain(game, self)
 
 
     def print_stats(self): 
