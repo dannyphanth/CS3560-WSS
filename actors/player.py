@@ -36,7 +36,9 @@ class Player(Actor):
         self.is_at_trader_location(self.game.traders)
         self.check_for_loot()
         self.game.apply_terrain_cost(self)
+        self.game.check_end_of_board(self)
         # self.print_stats()
+
 
 
     def rest(self): 

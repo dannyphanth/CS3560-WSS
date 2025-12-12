@@ -265,22 +265,22 @@ class AggressiveBrain(Brain):
         
         # Seek traders for potential advantage
         if scan['traders']:
-            print("Looking for trader")
+            # print("Looking for trader")
             pathTo = self.find_path_to('traders', playerPos, scan)
-            print("The path: ", pathTo)
+            # print("The path: ", pathTo)
             if pathTo: return pathTo
         
         # Get resources when needed
         if needs['water'] < 0.5:
             # print("Looking for water")
             pathTo = self.find_path_to('water', playerPos, scan)
-            print("The path: ", pathTo)
+            # print("The path: ", pathTo)
             if pathTo: return pathTo
         
         if needs['food'] < 0.5:
             # print("Looking for food")
             pathTo = self.find_path_to('food', playerPos, scan)
-            print("The path: ", pathTo)
+            # print("The path: ", pathTo)
             if pathTo: return pathTo
 
         # if all else fails, keep moving forward ✊
@@ -312,19 +312,19 @@ class BalancedBrain(Brain):
             if needs['water'] == max_need:
                 # print("Looking for water")
                 pathTo = self.find_path_to('water', playerPos, scan)
-                print("The path: ", pathTo)
+                # print("The path: ", pathTo)
                 if pathTo: return pathTo
             elif needs['food'] == max_need:
                 # print("Looking for food")
                 pathTo = self.find_path_to('food', playerPos, scan)
-                print("The path: ", pathTo)
+                # print("The path: ", pathTo)
                 if pathTo: return pathTo
 
         # Consider trading when in moderate condition
         if scan['traders'] and max_need > 0.5:
-            print("Looking for trader")
+            # print("Looking for trader")
             pathTo = self.find_path_to('traders', playerPos, scan)
-            print("The path: ", pathTo)
+            # print("The path: ", pathTo)
             if pathTo: return pathTo
 
         # if all else fails, keep moving forward ✊
@@ -350,28 +350,28 @@ class OpportunistBrain(Brain):
 
         # Prioritize traders
         if scan['traders']:
-            print("Looking for trader")
+            # print("Looking for trader")
             pathTo = self.find_path_to('traders', playerPos, scan)
-            print("The path: ", pathTo)
+            # print("The path: ", pathTo)
             if pathTo: return pathTo
 
         if needs['water'] < 0.85:
-            print("Looking for water")
+            # print("Looking for water")
             pathTo = self.find_path_to('water', playerPos, scan)
-            print("The path: ", pathTo)
+            # print("The path: ", pathTo)
             if pathTo: return pathTo
         
         if needs['food'] < 0.90:
             # print("Looking for food")
             pathTo = self.find_path_to('food', playerPos, scan)
-            print("The path: ", pathTo)
+            # print("The path: ", pathTo)
             if pathTo: return pathTo
 
         # if all else fails, go to nearest water
         if needs['water']:
-            print("Looking for water")
+            # print("Looking for water")
             pathTo = self.find_path_to('water', playerPos, scan)
-            print("The path: ", pathTo)
+            # print("The path: ", pathTo)
             if pathTo: return pathTo
         
         # if all else fails, keep moving forward ✊

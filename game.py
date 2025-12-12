@@ -30,7 +30,7 @@ class Game(arcade.Window):
         # Game objects
         self.world: Optional[World] = None
         self.turn_timer = 0
-        self.turn_interval = 0.5 # update the speed of each round
+        self.turn_interval = 0.2 # update the speed of each round
         self.player = None
         self.traders: list[Trader] = []
         self.items: list[Item] = []
@@ -86,6 +86,20 @@ class Game(arcade.Window):
 
 
     def on_draw(self) -> None:
+
+        # Draw end message if game finished
+        if self.state == "finished":
+            arcade.draw_text(
+                "You Made It!",
+                SCREEN_WIDTH / 2,
+                SCREEN_HEIGHT - 100,
+                arcade.color.WHITE,
+                font_size=40,                     # font size
+                anchor_x="center",
+                anchor_y="center"
+            )
+            return
+
         self.clear()
         if self.state == "menu":
             self.draw_menu()
@@ -108,6 +122,11 @@ class Game(arcade.Window):
                     arcade.draw_circle_filled(center_x, center_y, TILE_SIZE / 2 + 7, (170, 225, 255, 50))
 
 
+    def check_end_of_board(self, player):
+        if player.location[0] >= self.map_sizes[self.map_size_index][1] - 1:
+            self.state = "finished"
+
+
     def place_items(self, width_in_tiles, height_in_tiles, difficulty="normal", tiles_size=TILE_SIZE): 
         """
         Populates self.items with randomly placed items.
@@ -124,7 +143,7 @@ class Game(arcade.Window):
             item_count = max(2, area // 120)
         else:  # normal
             item_count = max(3, area // 80)
-            item_count = 300
+            # item_count = 300
 
         for _ in range(item_count):
             # Choose a random item class
@@ -156,6 +175,9 @@ class Game(arcade.Window):
 
     def on_update(self, delta_time):
         """Arcade function called every few seconds to update game state."""
+        if self.state == "finished":
+            return
+            
         self.turn_timer += delta_time
         if self.player and self.turn_timer >= self.turn_interval:
             self.turn_timer = 0
