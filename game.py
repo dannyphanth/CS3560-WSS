@@ -31,7 +31,7 @@ class Game(arcade.Window):
         # Game objects
         self.world: Optional[World] = None
         self.turn_timer = 0
-        self.turn_interval = 0.5  # update the speed of each round
+        self.turn_interval = 0.2  # update the speed of each round
         self.player: Optional[Player] = None
         self.traders: list[Trader] = []
         self.items: list[Item] = []
@@ -78,10 +78,10 @@ class Game(arcade.Window):
         # Player
         self.player = Player(
             "Player1",
-            location=(0, 0),
+            location=(0, 6),
             inventory=Inventory(12, 12, 12, max_items=30),
             game=self,
-            strength=25,
+            strength=10,
         )
 
         # Create brain for this player using menu choices
@@ -104,6 +104,20 @@ class Game(arcade.Window):
         self.state = "playing"
 
     def on_draw(self) -> None:
+
+        # Draw end message if game finished
+        if self.state == "finished":
+            arcade.draw_text(
+                "You Made It!",
+                SCREEN_WIDTH / 2,
+                SCREEN_HEIGHT - 100,
+                arcade.color.WHITE,
+                font_size=40,                     # font size
+                anchor_x="center",
+                anchor_y="center"
+            )
+            return
+
         self.clear()
         if self.state == "menu":
             self.draw_menu()
@@ -130,9 +144,13 @@ class Game(arcade.Window):
                         (170, 225, 255, 50),
                     )
 
-    def place_items(
-        self, width_in_tiles, height_in_tiles, difficulty="normal", tiles_size=TILE_SIZE
-    ):
+
+    def check_end_of_board(self, player):
+        if player.location[0] >= self.map_sizes[self.map_size_index][1]:
+            self.state = "finished"
+
+
+    def place_items(self, width_in_tiles, height_in_tiles, difficulty="normal", tiles_size=TILE_SIZE): 
         """
         Populates self.items with randomly placed items.
         """
@@ -179,12 +197,18 @@ class Game(arcade.Window):
 
     def on_update(self, delta_time):
         """Arcade function called every few seconds to update game state."""
+        if self.state == "finished":
+            return
+            
         self.turn_timer += delta_time
         if self.player and self.turn_timer >= self.turn_interval:
             self.turn_timer = 0
             self.player.brain.make_move()
+            
 
     def apply_terrain_cost(self, player: Player):
+        if not self.world.in_bounds(player.location):
+            return 
         terrainObj = self.world.get_terrain(player.location)
         # deduct strength (you had just `player.strength - terrainObj.move_cost`)
         player.strength -= terrainObj.move_cost

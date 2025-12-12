@@ -33,10 +33,6 @@ class Item(ABC):
     def apply(self, player: "Player", thisItem: Item) -> None:
         raise NotImplementedError
 
-    def on_pickup(self, player: "Player") -> bool:
-        self.apply(player)
-        return True  # default: one-shot item
-    
 
 @dataclass(eq=False)
 class RepeatingItem(Item):
@@ -52,8 +48,3 @@ class RepeatingItem(Item):
     @abstractmethod
     def apply(self, player: "Player") -> None:
         raise NotImplementedError
-
-    def on_pickup(self, player: "Player") -> bool:
-        self.apply(player)
-        self.times_used += 1
-        return False  # stays on the map

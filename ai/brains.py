@@ -5,6 +5,9 @@ import random
 import heapq
 
 
+
+
+
 class Brain(ABC):
     """
     Base class for AI decision-making that works with the Game.make_move()
@@ -39,48 +42,43 @@ class Brain(ABC):
         # Path is a list of (x, y) tiles we plan to walk through
         self.path: List[Tuple[int, int]] = []
 
+    
     @abstractmethod
-    def decide_path(self) -> List[Tuple[int, int]]:
+    def decide_path(self) -> Dict[str, Any]:
         """
-        Decide the next path (sequence of tiles) we want to travel.
-
-        Returns:
-            A list of (x, y) positions.
-            - [] means "rest / do nothing this turn".
+        Decide next action based on current state.
+        
+        Returns dict with:
+        - action: 'move', 'rest', 'trade'
+        - params: dict of action-specific parameters
         """
-        raise NotImplementedError
-
-    def make_move(self) -> None:
-        """
-        Called once per turn from Game.on_update().
-        Uses self.path as a queue of upcoming positions.
-        """
-        if not self.path:
-            # No more moves pending – compute a new path
+        pass
+    
+    
+    def make_move(self): 
+        if self.path == []: 
+            # no more moves to make a decision on a previous turn
+            # so find a new path
             self.path = self.decide_path()
 
-        if self.path:
-            # Take one step along the path
-            move = self.path.pop(0)
+        if self.path != []: 
+            move = self.path[0]
+            self.path.remove(move)
             self.player.set_location(move)
-        else:
-            # Still no path -> rest (e.g., regain strength)
+            return 
+        else: 
+            # if the path list is STILL empty, 
+            # the player will a skip a turn and gain a strength point
             self.player.rest()
-
+            
+    
     def _assess_needs(self) -> Dict[str, float]:
-        """
-        Assess needs as numbers in [0, 1].
-
-        NOTE: This is just a placeholder heuristic. You’ll probably want to
-        tweak it once you know your Player/Inventory scales.
-        """
-        inv = self.player.inventory
-        max_cap = max(1, getattr(inv, "max_items", 1))
-
+        """Assess urgency of needs (0.0 = satisfied, 1.0 = critical)."""
+        # Access Player attributes
         return {
-            "strength": self.player.strength / max_cap,
-            "food": inv.food / max_cap,
-            "water": inv.water / max_cap,
+            'strength': self.player.strength / self.player.inventory.max_items,
+            'food': self.player.inventory.food / self.player.inventory.max_items,
+            'water': self.player.inventory.water / self.player.inventory.max_items,
         }
 
     def find_path_to(
@@ -101,6 +99,7 @@ class Brain(ABC):
             up to and including the chosen target tile. Returns [] if no path.
         """
         candidates = scan.get(target_resource, [])
+
         if not candidates:
             return []
 
@@ -117,6 +116,7 @@ class Brain(ABC):
 
         return best_path
 
+    
     def assess_danger(self, pos: Tuple[int, int]) -> float:
         """
         Assess danger level at position (0.0 = safe, 1.0 = deadly).
@@ -136,7 +136,8 @@ class Brain(ABC):
 
         return 0.0
 
-    def _heuristic(self, a: Tuple[int, int], b: Tuple[int, int]) -> float:
+
+    def _heuristic(self, a, b) -> float:
         # Manhattan distance as heuristic (assuming 4-directional movement)
         return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
@@ -208,6 +209,9 @@ class Brain(ABC):
         return path, cost_so_far[goal]
 
 
+
+
+
 class CautiousBrain(Brain):
     """Conservative play style: prioritizes safety and resource management."""
 
@@ -221,10 +225,12 @@ class CautiousBrain(Brain):
 
         # Critical strength - rest is priority
         if needs["strength"] < 0.3:
+            print("Need to rest")
             return []
 
         # Urgent water need (more critical than food)
         if needs["water"] < 0.4:
+            print("Looking for water")
             path_to = self.find_path_to("water", player_pos, scan)
             if path_to:
                 return path_to
@@ -237,17 +243,20 @@ class CautiousBrain(Brain):
 
         # Moderate needs - seek resources proactively
         if needs["water"] < 0.7:
+            print("Looking for water")
             path_to = self.find_path_to("water", player_pos, scan)
             if path_to:
                 return path_to
 
         if needs["food"] < 0.7:
+            print("Looking for food")
             path_to = self.find_path_to("food", player_pos, scan)
             if path_to:
                 return path_to
 
         # Rest if low on resources
         if needs["strength"] < 0.7:
+            print("Need to rest")
             return []
 
         # Fallback: step to the right
@@ -262,14 +271,135 @@ class AggressiveBrain(CautiousBrain):
     pass
 
 
-class BalancedBrain(CautiousBrain):
-    """Balanced play style (currently same path logic as Cautious)."""
-    pass
+
+class AggressiveBrain(Brain):
+    """Aggressive play style: takes risks, seeks traders and valuable resources."""
+    
+    def decide_path(self) -> Dict[str, Any]:
+        needs = self._assess_needs()
+        scan = self.vision.scan_area(radius=2)
+        playerPos = self.player.location
+        
+        # Only rest if critically low
+        if needs['strength'] < 0.10:
+            print("Need to rest")
+            return []
+        
+        # Seek traders for potential advantage
+        if scan['traders']:
+            print("Looking for trader")
+            pathTo = self.find_path_to('traders', playerPos, scan)
+            # print("The path: ", pathTo)
+            if pathTo: return pathTo
+        
+        # Get resources when needed
+        if needs['water'] < 0.5:
+            print("Looking for water")
+            pathTo = self.find_path_to('water', playerPos, scan)
+            # print("The path: ", pathTo)
+            if pathTo: return pathTo
+        
+        if needs['food'] < 0.5:
+            print("Looking for food")
+            pathTo = self.find_path_to('food', playerPos, scan)
+            # print("The path: ", pathTo)
+            if pathTo: return pathTo
+
+        # if all else fails, keep moving forward ✊
+        return [(playerPos[0] + 2, playerPos[1])]
 
 
-class OpportunistBrain(CautiousBrain):
-    """Opportunistic play style (currently same path logic as Cautious)."""
-    pass
+
+
+
+
+
+class BalancedBrain(Brain):
+    """Balanced play style: weighs all factors reasonably."""
+
+
+    def decide_path(self) -> Dict[str, Any]:
+        needs = self._assess_needs()
+        scan = self.vision.scan_area(radius=2)
+        playerPos = self.player.location
+        
+        # Only rest if critically low
+        if needs['strength'] < 0.4:
+            print("Need to rest")
+            return []
+        
+        # Handle criitical needs first 
+        max_need = max(needs.values())
+        if max_need < 0.80:
+            if needs['water'] == max_need:
+                print("Looking for water")
+                pathTo = self.find_path_to('water', playerPos, scan)
+                # print("The path: ", pathTo)
+                if pathTo: return pathTo
+            elif needs['food'] == max_need:
+                print("Looking for food")
+                pathTo = self.find_path_to('food', playerPos, scan)
+                # print("The path: ", pathTo)
+                if pathTo: return pathTo
+
+        # Consider trading when in moderate condition
+        if scan['traders'] and max_need > 0.5:
+            print("Looking for trader")
+            pathTo = self.find_path_to('traders', playerPos, scan)
+            # print("The path: ", pathTo)
+            if pathTo: return pathTo
+
+        # if all else fails, keep moving forward ✊
+        return [(playerPos[0] + 1, playerPos[1])]
+
+
+
+
+
+
+
+class OpportunistBrain(Brain):
+    """Opportunistic play style: seeks traders and high-value resources."""
+    
+    def decide_path(self) -> Dict[str, Any]:
+        needs = self._assess_needs()
+        scan = self.vision.scan_area(radius=2)
+        playerPos = self.player.location
+        
+        # Only handle truly critical situations
+        if needs['strength'] < 0.1:
+            return []
+
+        # Prioritize traders
+        if scan['traders']:
+            print("Looking for trader")
+            pathTo = self.find_path_to('traders', playerPos, scan)
+            # print("The path: ", pathTo)
+            if pathTo: return pathTo
+
+        if needs['water'] < 0.85:
+            print("Looking for water")
+            pathTo = self.find_path_to('water', playerPos, scan)
+            # print("The path: ", pathTo)
+            if pathTo: return pathTo
+        
+        if needs['food'] < 0.90:
+            print("Looking for food")
+            pathTo = self.find_path_to('food', playerPos, scan)
+            # print("The path: ", pathTo)
+            if pathTo: return pathTo
+
+        # if all else fails, go to nearest water
+        if needs['water']:
+            print("Looking for water")
+            pathTo = self.find_path_to('water', playerPos, scan)
+            # print("The path: ", pathTo)
+            if pathTo: return pathTo
+        
+        # if all else fails, keep moving forward ✊
+        return [(playerPos[0] + 1, playerPos[1])]
+
+
 
 
 # Types available in the UI
