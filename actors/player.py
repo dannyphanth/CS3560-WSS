@@ -37,7 +37,7 @@ class Player(Actor):
         self.check_for_loot()
         self.game.apply_terrain_cost(self)
         self.game.check_end_of_board(self)
-        # self.print_stats()
+        self.print_stats()
 
 
 

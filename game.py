@@ -425,27 +425,20 @@ class Game(arcade.Window):
 
         current = self.player.location
         new = list(current)
-        moved = False
+
+        if symbol in (arcade.key.LEFT, arcade.key.A):
+            new[0] -= 1
+        elif symbol in (arcade.key.RIGHT, arcade.key.D):
+            new[0] += 1
+        elif symbol in (arcade.key.UP, arcade.key.W):
+            new[1] += 1
+        elif symbol in (arcade.key.DOWN, arcade.key.S):
+            new[1] -= 1
 
         if self.player.strength <= 0:
             print("Player has no strength left to move.")
             return
-
-        if symbol in (arcade.key.LEFT, arcade.key.A):
-            new[0] -= 1
-            moved = True
-        elif symbol in (arcade.key.RIGHT, arcade.key.D):
-            new[0] += 1
-            moved = True
-        elif symbol in (arcade.key.UP, arcade.key.W):
-            new[1] += 1
-            moved = True
-        elif symbol in (arcade.key.DOWN, arcade.key.S):
-            new[1] -= 1
-            moved = True
-
-        if moved:
-            self.player.set_location(tuple(new))
+        self.player.set_location(tuple(new))
 
 
 # ===============================================================
