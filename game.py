@@ -69,10 +69,10 @@ class Game(arcade.Window):
         # Player and Traders
         self.player = Player(
             "Player1",
-            location=(0, 0),
+            location=(0, 6),
             inventory=Inventory(12, 12, 12, max_items=30),
             game=self,
-            strength=25,
+            strength=10,
         )
 
         # Place traders at random tiles not occupied by player
