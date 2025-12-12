@@ -4,12 +4,13 @@ import arcade
 import random
 from systems.inventory import Inventory
 from world.map import TILE_SIZE
+from abc import ABC
 
 # Player can propose tradeOffer to Trader actors
 
 
 @dataclass(eq=False)
-class Actor:
+class Actor(ABC):
     # Initialize player with name and location (left/bottommost cell)
     def __init__(self, name, texture_path, location = (0,0), inventory=Inventory(gold=1, food=1, water=1, max_items=1)):
         self.name = name
