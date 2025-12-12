@@ -56,7 +56,6 @@ class Brain(ABC):
     
     def _assess_needs(self) -> Dict[str, float]:
         """Assess urgency of needs (0.0 = satisfied, 1.0 = critical)."""
-        
         # Access Player attributes
         return {
             'strength': self.player.strength / self.player.inventory.max_items,
