@@ -40,6 +40,12 @@ class Player(Actor):
         self.print_stats()
 
 
+    def rest(self): 
+        self.is_at_trader_location(self.game.traders)
+        self.check_for_loot() # in the case of reoccuring items
+        self.strength += 1
+
+        
     def check_for_loot(self):
         for item in self.game.items[:]:   # iterate over a copy
             if self.location == item.location:

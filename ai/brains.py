@@ -28,7 +28,6 @@ class Brain(ABC):
         pass
     
     
-    
     def make_move(self): 
         if self.path == []: 
             # no more moves to make a decision on a previous turn
@@ -43,10 +42,9 @@ class Brain(ABC):
         else: 
             # if the path list is STILL empty, 
             # the player will a skip a turn and gain a strength point
-            self.player.strength += 1
+            self.player.rest()
             
     
-
     def _assess_needs(self) -> Dict[str, float]:
         """Assess urgency of needs (0.0 = satisfied, 1.0 = critical)."""
         

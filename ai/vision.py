@@ -5,8 +5,10 @@ Works with Player class that uses 'location' attribute for position.
 """
 
 import heapq
-from typing import Tuple, List, Dict, Optional, Any
-from abc import ABC, abstractmethod
+from typing import Dict, Any
+import arcade
+
+
 
 
 class Vision:
@@ -15,23 +17,14 @@ class Vision:
     def __init__(self, game, player):
         self.game = game
         self.player = player
-        
-    
-    # def get_player_pos(self) -> Tuple[int, int]:
-    #     """Get player position, checking both 'location' and 'pos' attributes."""
-    #     if hasattr(self.player, 'location'):
-    #         return self.player.location
-    #     return getattr(self.player, 'pos', (0, 0))
 
 
     def scan_area(self, radius: int = 1) -> Dict[str, Any]:
         x = self.player.location[0]
         y = self.player.location[1]
         
-        
         water = []
         food = []
-        foodFountain = []
         moveCosts = []
         traders = []
         
@@ -49,12 +42,10 @@ class Vision:
                 # Check for items (food/water)
                 items = self.game.list_items_at_location(pos)
                 for item in items: 
-                    if item.name == 'Food':
+                    if item.name == 'Food' or item.name == 'Food Fountain':
                         food.append((pos, item, distance))
                     if item.name == 'Water':
                         water.append((pos, item, distance))
-                    if item.name == 'Food Fountain':
-                        foodFountain.append((pos, item, distance))
 
                 # Check for move cost 
                 move_cost = self.game.world.get_terrain(pos).move_cost
@@ -74,7 +65,6 @@ class Vision:
             # sort by distance -> that's why we use the x: x[2], because distance is the second index
             'water': sorted(water, key=lambda x: x[2]),
             'food': sorted(food, key=lambda x: x[2]),
-            'foodFountain': sorted(foodFountain, key=lambda x: x[2]),
             'moveCosts': sorted(moveCosts, key=lambda x: x[2]),
             'traders': sorted(traders, key=lambda x: x[2]),
         }    

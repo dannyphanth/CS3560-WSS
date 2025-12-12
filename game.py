@@ -118,8 +118,8 @@ class Game(arcade.Window):
         elif difficulty == "hard":
             item_count = max(2, area // 120)
         else:  # normal
-            # item_count = max(3, area // 80)
-            item_count = 300
+            item_count = max(3, area // 80)
+            # item_count = 300
 
         for _ in range(item_count):
             # Choose a random item class
