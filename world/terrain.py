@@ -29,7 +29,7 @@ PLAINS = Terrain(
     move_cost=1,
     water_cost=1,
     food_cost=1,
-    color=(136, 185, 127),
+    color=(80, 170, 80),
 )
 
 FOREST = Terrain(
@@ -37,7 +37,7 @@ FOREST = Terrain(
     move_cost=2,
     water_cost=1,
     food_cost=2,
-    color=(79, 127, 88),
+    color=(34, 139, 34),
 )
 
 MOUNTAIN = Terrain(
@@ -45,7 +45,7 @@ MOUNTAIN = Terrain(
     move_cost=3,
     water_cost=2,
     food_cost=2,
-    color=(138, 129, 124),
+    color=(120, 120, 120),
 )
 
 DESERT = Terrain(
@@ -53,7 +53,7 @@ DESERT = Terrain(
     move_cost=2,
     water_cost=3,
     food_cost=3,
-    color=(216, 201, 169),
+    color=(218, 165, 32),
 )
 
 WATER = Terrain(
@@ -61,7 +61,7 @@ WATER = Terrain(
     move_cost=1,
     water_cost=0,   #No water cost to stand near water
     food_cost=1,
-    color=(107, 175, 200),
+    color=(65, 105, 225),
 )
 
 ALL_TERRAINS = [PLAINS, FOREST, MOUNTAIN, DESERT, WATER]
