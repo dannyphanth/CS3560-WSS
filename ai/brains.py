@@ -12,7 +12,7 @@ class Brain(ABC):
     def __init__(self, game, player):
         self.game = game
         self.player = player
-        self.vision = Vision(game, player)
+        self.vision = FarSightVision(game, player)
         self.path = []
 
     
@@ -200,40 +200,40 @@ class CautiousBrain(Brain):
         Returns a path of squares to move to based on what is needed most.
         """
         needs = self._assess_needs()
-        scan = self.vision.scan_area(radius=20)
+        scan = self.vision.scan_area(radius=2)
         playerPos = self.player.location
         
         # Critical strength - rest is priority
         if needs['strength'] < 0.3:
-            print("Need to rest")
+            # print("Need to rest")
             return []
         
         # Urgent water need (more critical than food)
         if needs['water'] < 0.4:
-            print("Looking for water")
+            # print("Looking for water")
             pathTo = self.find_path_to('water', playerPos, scan)
             if pathTo: return pathTo
             
         # Urgent food need
         if needs['food'] < 0.4:
-            print("Looking for food")
+            # print("Looking for food")
             pathTo = self.find_path_to('food', playerPos, scan)
             if pathTo: return pathTo
         
         # Moderate needs - seek resources proactively
         if needs['water'] < 0.7:
-            print("Looking for water, casually")
+            # print("Looking for water, casually")
             pathTo = self.find_path_to('water', playerPos, scan)
             if pathTo: return pathTo
         
         if needs['food'] < 0.7:
-            print("Looking for food, casually")
+            # print("Looking for food, casually")
             pathTo = self.find_path_to('food', playerPos, scan)
             if pathTo: return pathTo
         
         # Rest if low on resources
         if needs['strength'] < 0.7:
-            print("Just hanging out")
+            # print("Just hanging out")
             return []
         
         # if all else fails, keep moving forward ✊

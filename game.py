@@ -24,17 +24,17 @@ class Game(arcade.Window):
     #===============================================================
     def __init__(self) -> None:
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-
         # Game state: menu or playing 
         self.state = "menu"
 
         # Game objects
         self.world: Optional[World] = None
         self.turn_timer = 0
-        self.turn_interval = 0.3 # update the speed of each round
+        self.turn_interval = 0.5 # update the speed of each round
         self.player = None
         self.traders: list[Trader] = []
         self.items: list[Item] = []
+        self.vision_squares = []
 
         # Menu options
         self.map_sizes = [
@@ -92,8 +92,6 @@ class Game(arcade.Window):
         elif self.state == "playing":
             if self.world:
                 self.world.draw()
-            if self.player:
-                self.player.draw()
             if self.traders:
                 for trader in self.traders:
                     trader.draw()
@@ -101,6 +99,13 @@ class Game(arcade.Window):
                 # because the item instances share a sprite_list, 
                 # simply use one item to draw the entire list
                 self.items[0].sprite_list.draw()
+            if self.player:
+                self.player.draw()
+            if self.vision_squares:
+                for square in self.vision_squares:
+                    center_x = square[0] * TILE_SIZE + TILE_SIZE / 2
+                    center_y = square[1] * TILE_SIZE + TILE_SIZE / 2
+                    arcade.draw_circle_filled(center_x, center_y, TILE_SIZE / 2 + 7, (170, 225, 255, 50))
 
 
     def place_items(self, width_in_tiles, height_in_tiles, difficulty="normal", tiles_size=TILE_SIZE): 
