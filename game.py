@@ -31,7 +31,7 @@ class Game(arcade.Window):
         # Game objects
         self.world: Optional[World] = None
         self.turn_timer = 0
-        self.turn_interval = 1 # update the speed of each round
+        self.turn_interval = 0.3 # update the speed of each round
         self.player = None
         self.traders: list[Trader] = []
         self.items: list[Item] = []
@@ -234,7 +234,7 @@ class Game(arcade.Window):
             self.handle_menu_input(symbol)
         else:
             # This is where we can handle game input
-            # self.handle_game_input(symbol)
+            self.handle_game_input(symbol)
             pass
 
 
@@ -306,6 +306,45 @@ class Game(arcade.Window):
 
         return traders
 
+
+
+    def handle_game_input(self, symbol) -> None:
+        """
+        handle_game_input
+        This is an outdated function that takes keyboard input from the human user. 
+        We leave it in in order to override and test functionality.
+        
+        :param self: 
+        :param symbol: 
+        """
+        if not self.player:
+            return
+
+        current = self.player.location
+        new = list(current)
+        moved = False
+
+        if self.player.strength <= 0:
+            print("Player has no strength left to move.")
+            return
+
+        if symbol in (arcade.key.LEFT, arcade.key.A):
+            new[0] -= 1
+            moved = True
+        elif symbol in (arcade.key.RIGHT, arcade.key.D):
+            new[0] += 1
+            moved = True
+        elif symbol in (arcade.key.UP, arcade.key.W):
+            new[1] += 1
+            moved = True
+        elif symbol in (arcade.key.DOWN, arcade.key.S):
+            new[1] -= 1
+            moved = True
+
+        if moved: 
+            self.player.set_location(tuple(new))
+            
+                
 
 #===============================================================
 # Start this file

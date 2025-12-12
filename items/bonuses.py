@@ -1,5 +1,8 @@
 '''
 Docstring for items.base
+
+
+
 It's important that we have (eq=False) after the @dataclass because this ensures
 that the instances are compared based off UNIQUE identifiers such as id(). Instead 
 of comparing instances off of equality (like "do two instances have the same name")
@@ -14,7 +17,10 @@ from items.base import *
 if TYPE_CHECKING:
     from ..actors.player import Player
 
+
 # ---------- One-time bonuses ----------
+
+
 
 @dataclass(eq=False)
 class FoodBonus(Item):
@@ -26,8 +32,13 @@ class FoodBonus(Item):
             amount=amount
         )
 
-    def apply(self, player: "Player") -> None:
+    def apply(self, player: "Player", thisItem: Item) -> None:
+        self.sprite.kill() # this kills the sprite in every arcade.sprite_list
+        player.game.items.remove(thisItem)
         player.inventory.food = min(player.inventory.max_items, player.inventory.food + self.amount)
+
+
+
 
 @dataclass(eq=False)
 class WaterBonus(Item):
@@ -39,8 +50,13 @@ class WaterBonus(Item):
             amount=amount
         )
 
-    def apply(self, player: "Player") -> None:
+    def apply(self, player: "Player", thisItem: Item) -> None:
+        self.sprite.kill() # this kills the sprite in every arcade.sprite_list
+        player.game.items.remove(thisItem)
         player.inventory.water = min(player.inventory.max_items, player.inventory.water + self.amount)
+
+
+
 
 @dataclass(eq=False)
 class GoldBonus(Item):
@@ -52,8 +68,13 @@ class GoldBonus(Item):
             amount=amount
         )
 
-    def apply(self, player: "Player") -> None:
+    def apply(self, player: "Player", thisItem: Item) -> None:
+        self.sprite.kill() # this kills the sprite in every arcade.sprite_list
+        player.game.items.remove(thisItem)
         player.inventory.gold = min(player.inventory.max_items, player.inventory.gold + self.amount)
+
+
+
 
 @dataclass(eq=False)
 class RepeatingFoodFountain(RepeatingItem):
@@ -65,5 +86,5 @@ class RepeatingFoodFountain(RepeatingItem):
             amount=amount
         )
 
-    def apply(self, player: "Player") -> None:
+    def apply(self, player: "Player", thisItem: Item) -> None:
         player.inventory.food = min(player.inventory.max_items, player.inventory.food + self.amount)

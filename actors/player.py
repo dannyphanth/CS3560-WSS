@@ -41,14 +41,11 @@ class Player(Actor):
 
 
     def check_for_loot(self):
-        self.game.items
         for item in self.game.items[:]:   # iterate over a copy
             if self.location == item.location:
                 pickedUpItem = True
                 # print("Picked up: ", item.amount, item.name)
-                item.apply(self)
-                item.sprite.kill() # this kills the sprite in every arcade.sprite_list
-                self.game.items.remove(item)
+                item.apply(self, item)
 
 
     def propose_trade(self, trader, player_items_presenting, player_items_requesting):

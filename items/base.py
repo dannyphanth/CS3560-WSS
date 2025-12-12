@@ -1,5 +1,5 @@
 '''
-Docstring for items.base
+items.base
 It's important that we have (eq=False) after the @dataclass because this ensures
 that the instances are compared based off UNIQUE identifiers such as id(). Instead 
 of comparing instances off of equality (like "do two instances have the same name")
@@ -30,7 +30,7 @@ class Item(ABC):
         self.sprite_list.append(self.sprite)
         
     @abstractmethod
-    def apply(self, player: "Player") -> None:
+    def apply(self, player: "Player", thisItem: Item) -> None:
         raise NotImplementedError
 
     def on_pickup(self, player: "Player") -> bool:
@@ -48,6 +48,10 @@ class RepeatingItem(Item):
             amount=amount,
         )
         self.used_this_round = False # internal state if needed
+
+    @abstractmethod
+    def apply(self, player: "Player") -> None:
+        raise NotImplementedError
 
     def on_pickup(self, player: "Player") -> bool:
         self.apply(player)
